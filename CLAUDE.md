@@ -19,8 +19,9 @@ One pure function, `computeTariffCode`, computes the code. The form and the dash
 | Framework | Next.js (App Router, server actions) + React |
 | Runtime and tooling | Bun: package manager, scripts, test runner |
 | Database | PostgreSQL, started with `docker compose` |
-| ORM | Prisma 7 with `@prisma/adapter-pg`. `postinstall` runs `prisma generate`. |
+| ORM | Prisma 8 (`@prisma/orm-postgres`). The contract is `src/prisma/contract.prisma`. `prisma contract emit` writes `contract.json` and `contract.d.ts` next to it. Both are committed. |
 | Validation | Zod v4 |
+| Client to server | Next.js server actions through `next-safe-action`, typed by the shared Zod schema |
 | Forms | React Hook Form + `zodResolver` |
 | UI | Tailwind v4 + shadcn/ui |
 | Lint and format | Biome |
@@ -33,10 +34,11 @@ Use the Context7 MCP server for library docs. Do not rely on memory for library 
 ```
 src/
   domain/       pure logic: tariff rules, question flow, Zod schemas
-  server/       Prisma client, repositories
+  server/       repositories, the safe-action client
+  prisma/       Prisma contract, emitted contract files, the db client
   app/          Next.js routes and server actions
   components/   shadcn/ui components and the form renderer
-prisma/         Prisma schema and migrations
+migrations/     Prisma migration files (`migrations/app/`)
 tests/e2e/      Playwright tests
 sources/        official source documents (reference only)
 scripts/        scripts that fetch and compare the sources
@@ -53,6 +55,10 @@ docs/           the challenge brief and other docs
 - Each tariff rule cites its source in a comment, for example `// ZStB 87.3 no. 7` or `// KS 45 § 4.3`.
 - The server validates input with the same Zod schema. It does not trust a tariff code from the client. The dashboard computes the code from the stored answers.
 - Every `switch` on a union is exhaustive and ends with a `never` check.
+- Enums, not free strings. A value with a fixed set of options is a `z.enum` in the domain and a `native_enum` in the Prisma contract, referenced with `pg.enum()`, which is a PostgreSQL enum type. Do not store it as `String` or as a text-backed `enum`. Do not use the TypeScript `enum` keyword: `z.enum` and `as const` give literal unions.
+- A yes/no question is a boolean. A question with two or more named answers is an enum.
+- A Prisma enum copies a domain `z.enum`. A script generates the `native_enum` block from the domain list, and a test in `src/server` checks that `db.enums` equals the domain list.
+- One type from the form to the database. A server action declares the shared Zod schema as its `inputSchema` and returns a typed union. No `any`, no `as` cast and no untyped `FormData` parsing at the client-server boundary.
 - Keep each canton and each process in its own module. A new canton adds a module. It does not change the Zurich module.
 
 ## Commands

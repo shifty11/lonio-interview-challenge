@@ -174,7 +174,7 @@ For replacement income, the questions add "während oder vor Bezug der Ersatzein
 
 ### 6.1 Earned income (`mainIncome = true`, lines 15854–15918)
 
-No result until the civil status, the confession, the residence result and (if married) `partnerEmployed` exist, and every child has a result.
+No result until the civil status, the confession, the residence result and (if married) `partnerEmployed` exist, and every child has a result. If `withChildren` is true and the child list is empty, there is also no result (lines 15876 and 15894). The UI prevents this case: it adds one child when `withChildren` becomes true.
 
 ```
 church = recognizedReligiousAffiliation ? "Y" : "N"

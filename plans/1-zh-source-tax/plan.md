@@ -85,7 +85,8 @@ If H is not clear (for example unclear cohabitation): use `A0` (KS 45 § 4.3).
 
 - Count the children who are minors or in their first education (with proof), and whose support the employee mainly pays.
 - For H, a child must live in the same household, or be in alternating custody with the person as the main contributor (`calculator-spec.md` § 4.2).
-- The file has 0–9 children. H has only 1–9. G is always `9`.
+- The file has 0–9 children. H has only 1–9. The code of G is always `G9N`.
+- The code is authoritative. The children field (pos. 44–45) matches the code digit, except in `G9N` and `Q9N`, where it is `00`.
 - More than 9 children: use 9. The record-format spec says "max. 9".
 
 ### 1.3 Church tax flag (ZStB 87.3 no. 8)
@@ -253,9 +254,12 @@ Record `12`: `PEL` 2% (electronic filing), `PPA` 2% (paper), `PSP` 10% (simplifi
 
 ## 9. TypeScript build (later step)
 
+`plans/2-onboarding-app/plan.md` builds item 3, `computeTariffCode`. Items 1, 2 and 4–6 are the optional tax-amount scope (see CLAUDE.md).
+
 1. **Data generation.** Parse `tar26zh.txt` once into a typed JSON file (code → sorted rows). Validate during generation:
    - header `00` and trailer `99` exist, and the record count matches;
    - each progressive table starts at 1, has no gaps or overlaps, and ends with an open row;
+   - the children field matches the code digit, except in `G9N` and `Q9N` (`00`);
    - the rate never goes down as income goes up (check, warn only).
 2. **Tariff lookup.** `rateFor(code, rateDefiningSalary)`.
 3. **Tariff code.** `computeTariffCode(answers)` from `calculator-spec.md`.
@@ -267,7 +271,7 @@ Record `12`: `PEL` 2% (electronic filing), `PPA` 2% (paper), `PSP` 10% (simplifi
 
 | Oracle | What it checks |
 |---|---|
-| `scripts/compare.py` | The ESTV file matches the Zurich PDFs in every cell. Result now: 52 tables, 0 mismatches. |
+| `scripts/compare.py` | The ESTV file matches the Zurich PDFs in every cell that the PDFs show. The PDFs cover 0–5 children: 52 of the 79 progressive tables. Codes with 6–9 children have no PDF cross-check. Result now: 52 tables, 0 mismatches. |
 | ESTV file | For every code and every band: the lower edge, the upper edge and one value inside give the file rate. |
 | Worked examples below | The end-to-end calculation with the real 2026 rates. |
 | KS 45 examples (§ 6.3–6.6) | Rate-defining salary for start or end of the job, the 13th month salary, more than one job, hourly pay. |
@@ -382,7 +386,7 @@ G has no personal tax (the rate is 0.00% up to CHF 1,150 a month). At CHF 100,00
 | Married, dual earner | C0N | 7,500.00 | 7,500.00 | 7,451–7,500 | 8.89% | 666.75 | 666.75 |
 | Single parent, 1 child, church | H1Y | 5,200.00 | 5,200.00 | 5,151–5,200 | 1.95% | 101.40 | 101.40 |
 | Replacement income from insurer | G9N | 3,000.00 | 3,000.00 | 2,951–3,000 | 5.19% | 155.70 | 155.70 |
-| Start on 16 March (16 days), salary 6,000 | A0N | 3,200.00 | 3,200 ÷ 16 × 30 = 6,000.00 | 5,951–6,000 | 6.79% | 217.28 | 217.30 |
+| Start on 15 March (16 days, § 3.2), salary 6,000 | A0N | 3,200.00 | 3,200 ÷ 16 × 30 = 6,000.00 | 5,951–6,000 | 6.79% | 217.28 | 217.30 |
 | Salary 6,000 + bonus 10,000 | A0N | 16,000.00 | 16,000.00 | 15,951–16,000 | 15.95% | 2,552.00 | 2,552.00 |
 | High salary | A0N | 120,000.00 | 120,000.00 | from 100,001 | 31.27% | 37,524.00 | 37,524.00 |
 | Cents at band edge | A0N | 850.40 | 850.40 | 801–850 (D3) | 0.24% | 2.04096 | 2.05 |
