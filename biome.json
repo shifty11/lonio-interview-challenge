@@ -7,7 +7,18 @@
 	},
 	"files": {
 		"ignoreUnknown": false,
-		"includes": ["**", "!sources", "!plans", "!docs", "!**/*.generated.ts"]
+		"includes": [
+			"**",
+			"!sources",
+			"!plans",
+			"!docs",
+			"!**/*.generated.ts",
+			"!.next",
+			"!next-env.d.ts",
+			"!src/prisma/contract.json",
+			"!src/prisma/contract.d.ts",
+			"!migrations"
+		]
 	},
 	"formatter": {
 		"enabled": true,
@@ -30,6 +41,11 @@
 			"source": {
 				"organizeImports": "on"
 			}
+		}
+	},
+	"css": {
+		"parser": {
+			"tailwindDirectives": true
 		}
 	}
 }

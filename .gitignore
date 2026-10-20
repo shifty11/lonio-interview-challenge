@@ -1,2 +1,9 @@
 __pycache__/
 node_modules/
+dist/
+.next/
+.env
+playwright-report/
+test-results/
+tsconfig.tsbuildinfo
+next-env.d.ts

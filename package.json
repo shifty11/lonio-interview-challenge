@@ -8,14 +8,43 @@
 		"lint": "biome check .",
 		"format": "biome format --write .",
 		"gen:tariff": "bun scripts/gen-tariff-data.ts",
-		"examples": "bun scripts/zh-worked-examples.ts"
+		"examples": "bun scripts/zh-worked-examples.ts",
+		"dev": "next dev",
+		"build": "next build",
+		"start": "next start",
+		"gen:enums": "bun scripts/gen-prisma-enums.ts",
+		"contract:emit": "bun run gen:enums && prisma contract emit",
+		"db:init": "prisma db init",
+		"db:migrate": "prisma db migrate",
+		"db:verify": "prisma db verify",
+		"db:seed": "bun src/prisma/seed.ts"
 	},
 	"dependencies": {
+		"@base-ui/react": "^1.9.0",
+		"@prisma/orm-postgres": "^8.0.0-rc.18",
+		"class-variance-authority": "^0.7.1",
+		"cn": "^0.5.0",
+		"dotenv": "^18.0.8",
+		"lucide-react": "^1.60.0",
+		"next": "^16.4.2",
+		"next-safe-action": "^8.7.3",
+		"react": "^19.3.1",
+		"react-dom": "^19.3.1",
+		"shadcn": "^4.22.1",
+		"tw-animate-css": "^1.4.0",
 		"zod": "^4"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.5.15",
+		"@prisma/cli-engine": "0.7.0",
+		"@tailwindcss/postcss": "^4.3.3",
 		"@types/bun": "^1.4.3",
+		"@types/node": "^26.6.5",
+		"@types/react": "^19.3.0",
+		"@types/react-dom": "^19.3.0",
+		"postcss": "^8.5.31",
+		"prisma": "^8.0.0-rc.23",
+		"tailwindcss": "^4.3.3",
 		"typescript": "^7.0.2"
 	}
 }
