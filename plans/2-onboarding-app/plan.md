@@ -15,6 +15,7 @@ Build the onboarding form and the HR dashboard. One pure function, `computeTarif
 - **Enums, not free strings.** A value with a fixed set of options is a `z.enum` in the domain and a `native_enum` in the Prisma 8 contract, referenced with `pg.enum()` (a PostgreSQL enum type). No TypeScript `enum` keyword: `z.enum` and `as const` give literal unions. A yes/no question is a boolean. A question with two or more named answers is an enum: `incomeType` (`earned` | `replacement`), `civilStatus` (`married` | `single`), `mainFinancialContributor` (`person` | `otherParent`), `group`, `countryOfResidence`. `sharedCustody` stays a boolean: both label variants ask the same yes/no question.
 - **One type from the form to the database.** The server action goes through `next-safe-action` with the shared Zod schema as `inputSchema`. The client calls a typed function, not a URL. The result is a typed union. No `any`, no `as` cast and no untyped `FormData` parsing at the boundary.
 - **The ZH answers stay JSON.** Their shape depends on the branch (discriminated unions, a repeated child group), and SQL cannot express that invariant. Zod validates the JSON on write and on read, and every enum-like value inside it is a `z.enum`. The columns that the database or the dashboard select by are typed columns: `nationality` and `canton` are native enums. The README lists the alternative (one normalized table per canton) as a trade-off.
+- **English UI.** All UI text is English: question labels, answers, the residence result text and remark, and the messages. The labels are translations of the calculator labels. Each question's `source` cites its spec row, and the spec row holds the German original.
 - G and Q are stored and shown as `G9N` and `Q9N`: every code then has the form letter + digit + Y/N and exists in `sources/estv/tar26zh.txt`. The calculator shows `G`/`Q` (spec §6.2); golden cases #16/#17 cite this difference.
 
 ## 1. Domain (`src/domain`, pure TS + Zod)
@@ -31,14 +32,14 @@ src/domain/
     registry.ts  { ZH: zurichModule }
     zurich/
       schema.ts     ZhDraftSchema, ZhAnswersSchema (+ child, residence)
-      questions.ts  flow data in calculator order, German labels verbatim
+      questions.ts  flow data in calculator order, English labels
       children.ts   childResultMarried / childResultUnmarried (spec §4.2, §4.3)
       residence.ts  residenceResult (spec §5.1)
       compute.ts    computeTariffCode (spec §6)
       preview.ts    previewTariff(draft)
       *.test.ts
   onboarding/
-    countries.ts        ISO alpha-2 list (`as const` array → `Nationality = z.enum(...)`), German names via Intl.DisplayNames
+    countries.ts        ISO alpha-2 list (`as const` array → `Nationality = z.enum(...)`), English names via Intl.DisplayNames
     schema.ts           OnboardingDraftSchema, OnboardingSchema
     employee-tariff.ts  employeeTariff(employee)
 ```
@@ -46,7 +47,7 @@ src/domain/
 - **Field names:** readable names with a mapping table to the calculator names (spec §2): `incomeType` ← `mainIncome`, `civilStatus` ← `civilStatusMarriedOrRegisteredRelationship`, `churchMember` ← `recognizedReligiousAffiliation`, `children.hasChildren/list` ← `withChildren/childQuestionnaires`, `gre1_gre2` → `gre1Gre2`.
 - **Two Zod schemas, same dot paths.** `ZhDraftSchema`: partial form state, optional leaves. `ZhAnswersSchema`: complete set, nested discriminated unions of `z.strictObject` (on `incomeType`, `civilStatus`, `hasChildren`; children as `MarriedChild` / `UnmarriedChild` unions, one member per spec table row; residence one member per §5.1 row). Zod v4 accepts `z.literal(true)` as a discriminator and nests discriminated unions. Types via `z.infer` only.
 - **Onboarding schema:** `Nationality` is a `z.enum` of the ISO alpha-2 list in `countries.ts`. `OnboardingSchema` is a discriminated union on `nationality`: `z.literal("CH")` → no `sourceTax`; `Nationality.exclude(["CH"])` → `sourceTax: { canton: "ZH", answers: ZhAnswers }`. Zod needs a literal or a set of literals in every member. A plain `z.string()` member is not allowed.
-- **Flow data:** `Question { id (dot path), label, options, visibleWhen(root, item), source }`, `RepeatingGroup` for children ("Ein weiteres Kind erfassen"). Label variants (married/unmarried child question, `sharedCustody` v1/v2, replacement-income residence texts) are separate entries on the same `id` with disjoint `visibleWhen`. `visibleWhen` is typed TS (trade-off vs a JSON DSL, noted in README).
+- **Flow data:** `Question { id (dot path), label, options, visibleWhen(root, item), source }`, `RepeatingGroup` for children ("Add another child"). Label variants (married/unmarried child question, `sharedCustody` v1/v2, replacement-income residence texts) are separate entries on the same `id` with disjoint `visibleWhen`. `visibleWhen` is typed TS (trade-off vs a JSON DSL, noted in README).
 - **Engine:** `prune` walks top-down and copies only visible answers, evaluating predicates on the pruned prefix (idempotent). Rule: a `visibleWhen` predicate reads earlier questions only. The engine passes the pruned prefix, not the full draft, so a forward reference reads `undefined`. The enumeration test (prune-stable leaves) catches a violation. `visibleQuestions` drives the renderer. `missingAnswers` gives per-field "required" errors.
 - **Compute:** `computeTariffCode(answers: ZhAnswers): TariffResult`, total over the complete type. `TariffResult = { kind: "code"; code; remark: string | null } | { kind: "noSourceTax"; text; remark }`. `previewTariff(draft)` = prune → missingAnswers → safeParse → compute, else `{ kind: "incomplete", missing }`. Digit capped at 9; border-crosser map A→L, B→M, C→N, H→P. Every rule cites spec § and `main.pretty.js` line. Exhaustive switches with `never`.
 - **Extension:** `SourceTaxModule { canton, draftSchema, answersSchema, flow, compute }` + registry with one entry. A new canton adds a folder; another process (family allowance) reuses `flow/`.
@@ -67,13 +68,15 @@ Files: `prisma.config.ts` (`definePrismaConfig` + `ormConfig` from `@prisma/orm-
 
 ## 4. UI
 
+UI draft (clickable): https://claude.ai/artifact/AqrhqGt3KszCS8C6AfVHet
+
 - Routes: `/`, `/onboarding`, `/onboarding/done`, `/hr`.
 - `components/onboarding/onboarding-form.tsx`: `useHookFormAction(submitOnboarding, resolver, { formProps: { shouldUnregister: true } })` from `@next-safe-action/adapter-react-hook-form`. `shouldUnregister: true` drops the value of a hidden question, so a question that reappears is empty, as in the calculator. The resolver prunes, runs `missingAnswers`, then `zodResolver(OnboardingSchema)`. The adapter maps the server `validationErrors` to RHF field errors.
 - `personal-fields.tsx`: first name, last name, nationality (searchable select). Source-tax block only for non-CH.
 - `flow-renderer.tsx`: `useWatch` + `visibleQuestions(zhFlow, draft)`; no conditionals in JSX; radio groups map option index to typed value.
 - `children-group.tsx`: `useFieldArray`; `hasChildren` true adds one child, false removes all; add/remove buttons.
-- `tariff-preview.tsx`: "Tarif: B2Y", no-source-tax text + remark, or "Noch unvollständig".
-- `hr/employee-table.tsx`: name, nationality, code badge, remark; CH shows "nicht quellensteuerpflichtig".
+- `tariff-preview.tsx`: "Tariff: B2Y", no-source-tax text + remark, or "Not complete".
+- `hr/employee-table.tsx`: name, nationality, code badge, remark; CH shows "no source tax".
 
 ## 5. Tests
 
