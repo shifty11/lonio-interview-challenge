@@ -1,0 +1,77 @@
+# CLAUDE.md
+
+## Purpose
+
+This repo is the Lonio interview challenge. The brief is in `docs/challenge.md`.
+
+The app has two screens:
+
+- **Onboarding form.** An employee enters personal data. The questions are conditional: each answer controls which questions come next. A Swiss employee gets no source-tax questions.
+- **HR dashboard.** HR sees all employees who completed the form. For each non-Swiss employee, it shows the suggested Zurich source-tax tariff code (for example `B2Y`).
+
+One pure function, `computeTariffCode`, computes the code. The form and the dashboard both use it.
+
+## Stack
+
+| Area | Tool |
+|---|---|
+| Language | TypeScript, strict (`strict`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`) |
+| Framework | Next.js (App Router, server actions) + React |
+| Runtime and tooling | Bun: package manager, scripts, test runner |
+| Database | PostgreSQL, started with `docker compose` |
+| ORM | Prisma 7 with `@prisma/adapter-pg`. `postinstall` runs `prisma generate`. |
+| Validation | Zod v4 |
+| Forms | React Hook Form + `zodResolver` |
+| UI | Tailwind v4 + shadcn/ui |
+| Lint and format | Biome |
+| Tests | `bun test` for the domain, Playwright for end-to-end |
+
+Use the Context7 MCP server for library docs. Do not rely on memory for library APIs.
+
+## Layout
+
+```
+src/
+  domain/       pure logic: tariff rules, question flow, Zod schemas
+  server/       Prisma client, repositories
+  app/          Next.js routes and server actions
+  components/   shadcn/ui components and the form renderer
+prisma/         Prisma schema and migrations
+tests/e2e/      Playwright tests
+sources/        official source documents (reference only)
+scripts/        scripts that fetch and compare the sources
+plans/          plans, one folder per topic
+docs/           the challenge brief and other docs
+```
+
+## Architecture rules
+
+- `src/domain` imports nothing from React, Next.js or Prisma. It is pure TypeScript and Zod.
+- The question flow is data: a list of questions with `visibleWhen` rules. The form renderer reads this data. Do not hard-code conditional questions in JSX.
+- The Zod schema is the single source of the input type. Infer types with `z.infer`. Do not write a second type by hand.
+- Use a discriminated union when an answer exists only in a branch (for example, `spouseEmployed` exists only when the civil status is married).
+- Each tariff rule cites its source in a comment, for example `// ZStB 87.3 no. 7` or `// KS 45 § 4.3`.
+- The server validates input with the same Zod schema. It does not trust a tariff code from the client. The dashboard computes the code from the stored answers.
+- Every `switch` on a union is exhaustive and ends with a `never` check.
+- Keep each canton and each process in its own module. A new canton adds a module. It does not change the Zurich module.
+
+## Commands
+
+The app has no scaffold yet. Add the commands here when they exist, and run each one before you list it.
+
+## Testing
+
+- Domain tests are table-driven. Each case cites its source (a document section or a calculator run).
+- A rule change starts with a failing test.
+- Before you say that work is done, run `bun test` and Biome, and report the output.
+
+## Sources and plans
+
+- `sources/` holds the official documents. `scripts/fetch-sources.sh` downloads them again. Do not edit these files.
+- `plans/1-zh-source-tax/plan.md` defines the Zurich tariff logic and its tests.
+- The challenge requires only the tariff code. The tax amount in the plan is optional extra scope.
+- Plans live in `plans/<n>-<topic>/plan.md`. In this repo, `plans/` is under version control.
+
+## Writing style
+
+Write all prose in ASD-STE100 Simplified Technical English: short sentences, active voice, one meaning per word. Docs describe the system as it is now, in the present tense.
