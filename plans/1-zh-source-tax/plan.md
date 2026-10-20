@@ -3,7 +3,7 @@
 ## Goal
 
 Calculate the monthly source tax (Quellensteuer, QST) of an employee in the canton of Zurich for 2026.
-A later step builds the logic in TypeScript. This document defines the logic and the tests. It contains no code.
+This document defines the logic and the tests. Section 9 and `spec.md` define the TypeScript build.
 
 ## Scope
 
@@ -246,26 +246,53 @@ Record `12`: `PEL` 2% (electronic filing), `PPA` 2% (paper), `PSP` 10% (simplifi
 
 | ID | Question | Recommendation | Status |
 |---|---|---|---|
-| D1 | Rounding of the tax amount | Round to CHF 0.05, halves up. Make it one setting. Swissdec § 5.1.1 and the KS 45 examples (10 of 10) support it. The Swissdec appendix 1 workbook does not round. | open |
-| D2 | 13th month salary paid quarterly, half-yearly or yearly, and at a start or end of the job | Use Swissdec § 10.6.1.2: treat it as periodic and convert it with the other periodic pay. KS 45 § 6.3 uses 25%, 50% or 100% of one full 13th month salary instead. Swissdec says the two methods can give different results. | open |
-| D3 | Rate-defining salary with cents at a band edge (for example CHF 850.40) | Use the half-open interval `from ≤ x < from + width`. No source defines this. This rule has no gaps. | open |
+| D1 | Rounding of the tax amount | Round to CHF 0.05, halves up. One setting (`roundingStep`). Swissdec § 5.1.1 and the KS 45 examples (10 of 10) support it. The Swissdec appendix 1 workbook does not round. | decided |
+| D2 | 13th month salary paid quarterly, half-yearly or yearly, and at a start or end of the job | Swissdec ELM 6.0 § 10.6.1.2: the 13th month salary is periodic pay and is converted with the other periodic pay. KS 45 § 6.3 adds 25%, 50% or 100% of one full 13th month salary instead. The results differ at a start or end of the job: Swissdec § 10.6.1.2 example 2 (end on 1 November) gives a rate-defining salary of CHF 156,499.50; the KS 45 rule gives about CHF 12,000. The KS 45 § 6.3 example and the KS 45 § 6.6 examples with a 13th month salary are therefore not test cases. | decided |
+| D3 | Rate-defining salary with cents at a band edge (for example CHF 850.40) | Use the half-open interval `from ≤ x < from + width`. The last band of a table has no upper bound. No source defines this. This rule has no gaps. | decided |
 | D4 | More than 9 children | Use 9. The Zurich calculator does the same (`calculator-spec.md` § 6.1). | decided |
-| D5 | Day count in February of a leap year | Follow the KS 45 § 6.6 table: 28 and 29 February 2024 both count as day 30. The table has no other leap-year rows (for example 27 February 2024). Check the AHV day-count method before the build. | open |
+| D5 | Day count in February of a leap year | Follow the KS 45 § 6.6 table: 28 and 29 February 2024 both count as day 30. | decided |
 
-## 9. TypeScript build (later step)
+## 9. TypeScript build
 
-`plans/2-onboarding-app/plan.md` builds item 3, `computeTariffCode`. Items 1, 2 and 4–6 are the optional tax-amount scope (see CLAUDE.md).
+`spec.md` gives the exact names, types and tests. The spec wins over this section.
 
-1. **Data generation.** Parse `tar26zh.txt` once into a typed JSON file (code → sorted rows). Validate during generation:
-   - header `00` and trailer `99` exist, and the record count matches;
-   - each progressive table starts at 1, has no gaps or overlaps, and ends with an open row;
-   - the children field matches the code digit, except in `G9N` and `Q9N` (`00`);
-   - the rate never goes down as income goes up (check, warn only).
-2. **Tariff lookup.** `rateFor(code, rateDefiningSalary)`.
-3. **Tariff code.** `computeTariffCode(answers)` from `calculator-spec.md`.
-4. **Rate-defining salary.** `rateDefiningSalary(month)` from section 3.
-5. **Tax.** `sourceTax(month)` returns `{ code, taxableSalary, rateDefiningSalary, rate, tax }`.
-6. Use a decimal library or integer Rappen for money. Do not use binary floating point for money.
+### 9.1 Decisions of the user
+
+- Scope: the tax amount and `computeTariffCode` in one change. Plan 2 builds the app on top of it.
+- D1, D3 and D5: the recommendations of section 8.
+- D2: Swissdec ELM 6.0 § 10.6.1.2, with a test for its two examples.
+- No pull request. The change stays local as jj commits.
+
+Decisions of the orchestrator:
+
+- A minimal package (Bun, TypeScript, Zod v4, Biome) without Next.js. Plan 2 adds Next.js to it.
+- Money in integer Rappen, the rate-defining salary as an exact fraction (`bigint`). No decimal library.
+- The ESTV record parser and the monthly model are national modules (`estv/`, `monthly/`). The Zurich module holds the 2026 data and the tariff-code logic.
+- The generator writes one TypeScript file with the 2026 tables and the code list. The file is committed.
+- English texts for the no-source-tax result and the remark (plan 2 "English UI").
+
+### 9.2 Order of work
+
+1. Package scaffold: `package.json`, `tsconfig.json`, `biome.json`, `bunfig.toml`. Commands into `CLAUDE.md`.
+2. ESTV parser and generator, the generated file, the regeneration test. This gives `TariffCode`.
+3. Tariff code: answers schema, child results, residence result, `computeTariffCode`. Tests first.
+4. `rateFor` and the full-file lookup test.
+5. Social-insurance days and rate-defining salary. Tests first.
+6. Tax amount: worked examples, Swissdec § 10.6.1.2 examples, rounding.
+7. Swissdec appendix 1 cases in scope.
+8. `scripts/zh-worked-examples.ts`.
+
+### 9.3 Verification
+
+- `bun test`, `bun run typecheck`, `bun run lint`: all pass.
+- `bun run gen:tariff`, then `jj diff`: no change in the generated file.
+
+### 9.4 End-to-end
+
+There is no app yet. The end-to-end check runs the real functions on the real file:
+
+- `bun run examples` prints the appendix table of this plan. Every code, rate, rate-defining salary and tax matches the table.
+- `bun run examples` also prints the two Swissdec § 10.6.1.2 examples: 8,500.00 → 9.09% → 386.35, and 156,499.50 → 31.27% → 1,631.25.
 
 ## 10. Tests
 
@@ -275,7 +302,7 @@ Record `12`: `PEL` 2% (electronic filing), `PPA` 2% (paper), `PSP` 10% (simplifi
 | ESTV file | For every code and every band: the lower edge, the upper edge and one value inside give the file rate. |
 | Worked examples below | The end-to-end calculation with the real 2026 rates. |
 | KS 45 examples (§ 6.3–6.6) | Rate-defining salary for start or end of the job, the 13th month salary, more than one job, hourly pay. |
-| Swissdec appendix 1 (`M1`–`M47`) | The rate-defining salary and the tax amount, with the rates from the `Ansätze` sheet injected in place of the Zurich rates. |
+| Swissdec appendix 1 (`M1`–`M47`) | The rate-defining salary and the tax amount of the cases in scope, with the rates of each case sheet in place of the Zurich rates. |
 | KS 45 rounding examples | 1,024 × 11.1% → 113.65; 1,540 × 7.2% → 110.90; 1,485 × 11.4% → 169.30. |
 
 ## 11. Rate formula (reverse-engineered)

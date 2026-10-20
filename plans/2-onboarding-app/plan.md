@@ -20,6 +20,8 @@ Build the onboarding form and the HR dashboard. One pure function, `computeTarif
 
 ## 1. Domain (`src/domain`, pure TS + Zod)
 
+Plan 1 (`plans/1-zh-source-tax/spec.md`) builds the package, `types.ts`, `TariffCode`, `ZhAnswersSchema`, `children.ts`, `residence.ts`, `compute.ts`, the ESTV parser, the 2026 tables and the tax amount. This plan adds the other files below.
+
 ```
 src/domain/
   flow/          generic question engine (no Zurich knowledge)
@@ -80,13 +82,10 @@ UI draft (clickable): https://claude.ai/artifact/AqrhqGt3KszCS8C6AfVHet
 
 ## 5. Tests
 
-`bun test` (root `src/`, set in `bunfig.toml`). Each case has a `source`.
+`bun test` (root `src/`, set in `bunfig.toml`). Each case has a `source`. Plan 1 owns the compute, child, residence, tariff-data and tax tests.
 
 | File | Cases |
 |---|---|
-| `zurich/compute.test.ts` | 17 golden cases (spec §9, G9N/Q9N), built-in H3N/P3N (§8), 10 children → B9N |
-| `zurich/children.test.ts` | every row of §4.2 and §4.3 |
-| `zurich/residence.test.ts` | every row of §5.1 |
 | `zurich/visibility.test.ts` | each "visible when" condition of §3, §4.1, §5; the residence group follows the rule in Fixed decisions, not §3 row 7 |
 | `zurich/prune.test.ts` | idempotence, stale branches dropped on changes |
 | `zurich/civil-status-change.test.ts` | spec §7.2 flow gives `A0N` (calculator: `H0N`, bug) |
@@ -100,18 +99,17 @@ Playwright (`tests/e2e/onboarding.spec.ts`; `globalSetup` drops and recreates th
 
 ## 6. Steps (each one verifiable)
 
-1. Scaffold: create-next-app (TS, App Router, `src/`, Tailwind) with Bun; strict tsconfig; Biome instead of ESLint; shadcn init; scripts; `.env.example`.
+1. Scaffold: add Next.js (App Router, `src/`), React and Tailwind to the existing Bun package of plan 1. Keep the strict tsconfig and Biome. shadcn init; scripts; `.env.example`.
 2. Flow engine + generic tests.
-3. Zurich schemas + flow data; schema-path and visibility tests.
-4. Child and residence tables, tests first.
-5. Compute, preview, golden, civil-status and enumeration tests.
-6. Onboarding schema + `employeeTariff`.
-7. DB: docker compose, `prisma orm init --target postgres --authoring psl`, the contract with the two native enums, `scripts/gen-prisma-enums.ts`, `contract emit`, enum test, first migration plan, repository, `src/prisma/seed.ts` (golden employees).
-8. `next-safe-action` client, server action + core test.
-9. Dashboard page.
-10. Form: personal + main questions + preview, then children, then residence.
-11. Playwright specs.
-12. CLAUDE.md commands, README, final run of `bun test`, lint, typecheck, e2e.
+3. `ZhDraftSchema` + flow data; schema-path and visibility tests.
+4. Preview, civil-status and enumeration tests. Compute, child and residence tables and the golden tests exist from plan 1.
+5. Onboarding schema + `employeeTariff`.
+6. DB: docker compose, `prisma orm init --target postgres --authoring psl`, the contract with the two native enums, `scripts/gen-prisma-enums.ts`, `contract emit`, enum test, first migration plan, repository, `src/prisma/seed.ts` (golden employees).
+7. `next-safe-action` client, server action + core test.
+8. Dashboard page.
+9. Form: personal + main questions + preview, then children, then residence.
+10. Playwright specs.
+11. CLAUDE.md commands, README, final run of `bun test`, lint, typecheck, e2e.
 
 ## 7. Commands (add to CLAUDE.md after each one runs)
 
