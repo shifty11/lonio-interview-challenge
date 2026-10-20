@@ -60,6 +60,9 @@ const QST_DAYS = 30n;
 
 const HUNDRED = ratio(100n, 1n);
 
+// The limit of 100% is a decision of this build, not a rule of KS 45 § 6.4.
+// Swissdec appendix 1 M9 (September) has a total level of 101.21%.
+// See the commented-out test at the end of rate-defining.test.ts.
 function checkPercent(value: Ratio, name: string, max: Ratio): void {
 	if (value.num <= 0n || ratioCompare(value, max) > 0) {
 		throw new Error(

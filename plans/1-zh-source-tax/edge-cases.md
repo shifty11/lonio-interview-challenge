@@ -6,7 +6,7 @@ This list names the cases that the code of plan 1 does not calculate, or that no
 
 | Case | Source | What the code does |
 |---|---|---|
-| Total employment level above 100% (the sheet adds 101.21% for two jobs in one month) | Swissdec appendix 1 M9 (September) | `0 < ownPercent ≤ totalPercent ≤ 100`. A total above 100% throws an error. That month is not a test case. |
+| Total employment level above 100% (the sheet adds 101.21% for two jobs in one month) | Swissdec appendix 1 M9 (September) | `0 < ownPercent ≤ totalPercent ≤ 100`. A total above 100% throws an error. That month is not a test case. Known limitation. A commented-out test in `src/domain/source-tax/monthly/rate-defining.test.ts` holds the case. Fix later: remove the upper limit. |
 | Amount that is not a whole number of Rappen (for example a pro-rata 13th month salary of 1/12 × 23,000 = 1,916.666…) | Swissdec appendix 1 M11_AG2 (March), M19 (October), M20 (October), M30_AG1 (April), M30_AG2 (December), M34 (August), M47 (December) | Money is an integer number of Rappen. The caller must round the amount before the call. The workbook does not round it. These months are not test cases. The other months of the sheets are. |
 | Two periods of employment in one month (for example leave on 10 February, new job on 21 February) | Swissdec appendix 1 M16 (February), M45 (February) | `Period` has one start and one end. The caller cannot give two periods. |
 | Hourly or daily pay together with a second job | KS 45 § 6.5 | `employment` must be `single` for hourly and daily pay. KS 45 § 6.5 says that the conversion to 180 hours or 21.667 days covers more than one job. |

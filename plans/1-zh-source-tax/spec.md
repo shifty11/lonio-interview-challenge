@@ -194,7 +194,7 @@ type MonthInput<Code extends string> = {
   - `noLevel`: `p + file.medians.MED`.
   Then add `aperiodic` without conversion.
 - Hourly: `pay / hours × 180 + aperiodic`. Daily: `pay / days × 21667/1000 + aperiodic`. `employment` must be `single` (KS 45 § 6.5 covers more than one job). Else throw.
-- Percent values are exact ratios with `0 < ownPercent ≤ totalPercent ≤ 100`. Decimal values such as 37.5% or hours ÷ 182 are allowed. Else throw.
+- Percent values are exact ratios with `0 < ownPercent ≤ totalPercent ≤ 100`. Decimal values such as 37.5% or hours ÷ 182 are allowed. Else throw. The upper limit of 100% is a known limitation (`edge-cases.md` § 1).
 - `taxableOnly`: taxable pay that does not enter the rate-defining salary, for example sick pay from the employer to an hourly employee (KS 45 § 6.5 example 6).
 - The monthly modules are national. They do not import from `zurich/`. The code type is a type parameter; the Zurich module uses `TariffCode`.
 

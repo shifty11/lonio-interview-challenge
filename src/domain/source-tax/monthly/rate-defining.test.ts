@@ -484,3 +484,27 @@ describe("rateDefiningSalary throws", () => {
 		});
 	}
 });
+
+// Known limitation: `rateDefiningSalary` throws when the total employment level is above 100%
+// (spec.md § 10, edge-cases.md § 1).
+// Swissdec appendix 1 M9 (September) accepts a total of 101.21%.
+// To fix later: remove the upper limit of `totalPercent`, then enable this test.
+//
+// source: Swissdec appendix 1, sheet M9, column Sep. Pay 2,625.00 for 75 hours. The own level is
+// 75 / 182 (BG AG 1 = 0.4121), the other job is 60% (BG andere AG = 0.6). The total is
+// 75/182 + 3/5 = 921/910 = 101.2088% (BG Total = 1.0121). The sheet shows the rate-defining
+// salary 6,447 (QST-SB-Lohn).
+//
+// describe("known limitation: total employment level above 100%", () => {
+// 	test("M9 September: 2625 at 75/182 of a total of 921/910 gives 6447", () => {
+// 		const result = rateDefiningSalary(
+// 			monthly("2625", {
+// 				kind: "levels",
+// 				ownPercent: ratio(7500n, 182n),
+// 				totalPercent: ratio(92100n, 910n),
+// 			}),
+// 			ZH_2026,
+// 		);
+// 		expectChf(result, "6447");
+// 	});
+// });
