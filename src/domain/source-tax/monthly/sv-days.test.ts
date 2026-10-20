@@ -154,6 +154,7 @@ describe("socialInsuranceDays", () => {
 		});
 	}
 
+	// source: spec.md § 9 (startAndEnd: n(end) - n(start) + 1)
 	test("start and end 1-15 February 2026 count 15 days", () => {
 		expect(
 			socialInsuranceDays({
@@ -203,6 +204,7 @@ describe("socialInsuranceDays throws", () => {
 			period: { kind: "start", date: d(2026, 1, 1.5) },
 		},
 	];
+	// source: spec.md § 9 (throw cases: another month, end before start) and a calendar check of the date
 	for (const c of throwing) {
 		test(c.name, () => {
 			expect(() => socialInsuranceDays(c.period)).toThrow();

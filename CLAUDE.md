@@ -73,7 +73,7 @@ Run each command from the repo root. Each command ran without error when it was 
 | `bun test` | all unit tests (`bunfig.toml` sets the root to `src`) |
 | `bun run gen:tariff` | writes `src/domain/source-tax/zurich/tariff-2026.generated.ts` from `sources/estv/tar26zh.txt`. The file must not change. |
 | `bun run examples` | prints the worked examples of `plans/1-zh-source-tax/plan.md` from the real functions. It exits with code 1 when a value differs. |
-| `uv run --with openpyxl python3 scripts/extract-swissdec-appendix.py` | writes `src/domain/source-tax/monthly/swissdec-appendix.data.ts` from the Swissdec appendix workbook. Run `bun run format` after it. |
+| `uv run --with openpyxl python3 scripts/extract-swissdec-appendix.py` | writes `src/domain/source-tax/monthly/swissdec-appendix.generated.ts` from the Swissdec appendix workbook. |
 
 ## Testing
 

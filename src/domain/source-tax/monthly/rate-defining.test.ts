@@ -6,13 +6,24 @@ import {
 	ratio,
 	ratioEquals,
 	ratioOf,
+	roundHalfUp,
 } from "../money.ts";
 import { TariffCode } from "../zurich/codes.ts";
 import { ZH_2026 } from "../zurich/tariff-2026.generated.ts";
-import { type MonthInput, rateDefiningSalary } from "./rate-defining.ts";
+import {
+	type MonthInput as GenericMonthInput,
+	rateDefiningSalary,
+} from "./rate-defining.ts";
 import type { Period } from "./sv-days.ts";
 
+type MonthInput = GenericMonthInput<TariffCode>;
 const A0N = TariffCode.parse("A0N");
+
+/** A percent value from a decimal string, for example `pct("38.46")`. */
+function pct(text: string): Ratio {
+	const [whole = "0", decimals = ""] = text.split(".");
+	return ratio(BigInt(whole + decimals), 10n ** BigInt(decimals.length));
+}
 const fullMonth: Period = { kind: "fullMonth" };
 const zero = rappen(0);
 
@@ -39,6 +50,7 @@ function monthly(
 			period: options.period ?? fullMonth,
 		},
 		aperiodic: options.aperiodic === undefined ? zero : chf(options.aperiodic),
+		taxableOnly: zero,
 		employment,
 	};
 }
@@ -68,8 +80,8 @@ const cases: Case[] = [
 		source: "§ 6.4 example 1, F. AG 50% of 100%",
 		input: monthly("4500", {
 			kind: "levels",
-			ownPercent: 50,
-			totalPercent: 100,
+			ownPercent: pct("50"),
+			totalPercent: pct("100"),
 		}),
 		expected: "9000",
 	},
@@ -77,27 +89,27 @@ const cases: Case[] = [
 		source: "§ 6.4 example 1, K. AG 50% of 100%",
 		input: monthly("4000", {
 			kind: "levels",
-			ownPercent: 50,
-			totalPercent: 100,
+			ownPercent: pct("50"),
+			totalPercent: pct("100"),
 		}),
 		expected: "8000",
 	},
 	{
 		source: "§ 6.4 example 2, M. AG level unknown: own level to 100%",
-		input: monthly("4500", { kind: "ownLevelOnly", ownPercent: 50 }),
+		input: monthly("4500", { kind: "ownLevelOnly", ownPercent: pct("50") }),
 		expected: "9000",
 	},
 	{
 		source: "§ 6.4 example 2, T. AG level unknown: own level to 100%",
-		input: monthly("4400", { kind: "ownLevelOnly", ownPercent: 40 }),
+		input: monthly("4400", { kind: "ownLevelOnly", ownPercent: pct("40") }),
 		expected: "11000",
 	},
 	{
 		source: "§ 6.4 example 3, M. AG total level 90%",
 		input: monthly("4500", {
 			kind: "levels",
-			ownPercent: 50,
-			totalPercent: 90,
+			ownPercent: pct("50"),
+			totalPercent: pct("90"),
 		}),
 		expected: "8100",
 	},
@@ -105,8 +117,8 @@ const cases: Case[] = [
 		source: "§ 6.4 example 3, T. AG total level 90%",
 		input: monthly("4400", {
 			kind: "levels",
-			ownPercent: 40,
-			totalPercent: 90,
+			ownPercent: pct("40"),
+			totalPercent: pct("90"),
 		}),
 		expected: "9900",
 	},
@@ -115,14 +127,14 @@ const cases: Case[] = [
 			"§ 6.4 example 4, G. AG 70% plus bonus 2000 (no conversion of the bonus)",
 		input: monthly(
 			"4550",
-			{ kind: "ownLevelOnly", ownPercent: 70 },
+			{ kind: "ownLevelOnly", ownPercent: pct("70") },
 			{ aperiodic: "2000" },
 		),
 		expected: "8500",
 	},
 	{
 		source: "§ 6.4 example 4, H. AG 30%",
-		input: monthly("1200", { kind: "ownLevelOnly", ownPercent: 30 }),
+		input: monthly("1200", { kind: "ownLevelOnly", ownPercent: pct("30") }),
 		expected: "4000",
 	},
 	{
@@ -145,8 +157,8 @@ const cases: Case[] = [
 		source: "§ 6.4 example 7, R. AG 50% of 70%",
 		input: monthly("4500", {
 			kind: "levels",
-			ownPercent: 50,
-			totalPercent: 70,
+			ownPercent: pct("50"),
+			totalPercent: pct("70"),
 		}),
 		expected: "6300",
 	},
@@ -154,8 +166,8 @@ const cases: Case[] = [
 		source: "§ 6.4 example 8, P. AG 60% of 100%",
 		input: monthly("6000", {
 			kind: "levels",
-			ownPercent: 60,
-			totalPercent: 100,
+			ownPercent: pct("60"),
+			totalPercent: pct("100"),
 		}),
 		expected: "10000",
 	},
@@ -163,14 +175,14 @@ const cases: Case[] = [
 		source: "§ 6.4 example 8, IV pension 40% of 100%",
 		input: monthly("2000", {
 			kind: "levels",
-			ownPercent: 40,
-			totalPercent: 100,
+			ownPercent: pct("40"),
+			totalPercent: pct("100"),
 		}),
 		expected: "5000",
 	},
 	{
 		source: "§ 6.4 example 3 of § 6.5, T. AG 50%",
-		input: monthly("2400", { kind: "ownLevelOnly", ownPercent: 50 }),
+		input: monthly("2400", { kind: "ownLevelOnly", ownPercent: pct("50") }),
 		expected: "4800",
 	},
 	// KS 45 § 6.5, hourly pay
@@ -216,8 +228,12 @@ const cases: Case[] = [
 	},
 	{
 		source:
-			"§ 6.5 example 6, wages 2625 for 75 hours plus family allowance 1200 (the sick pay of 2000 is not rate-defining)",
-		input: { ...hourly("2625", "75"), aperiodic: chf("1200") },
+			"§ 6.5 example 6: 75 hours at 2625 plus the family allowance 1200 (aperiodic: not converted, as in the table of the example). The sick pay 2000 is taxableOnly: it is not rate-defining.",
+		input: {
+			...hourly("2625", "75"),
+			aperiodic: chf("1200"),
+			taxableOnly: chf("2000"),
+		},
 		expected: "7500",
 	},
 	// KS 45 § 6.5, daily pay (190.00 x 21.667)
@@ -286,6 +302,7 @@ function hourly(pay: string, hours: string): MonthInput {
 		code: A0N,
 		pay: { kind: "hourly", pay: chf(pay), hours: ratio(BigInt(hours), 1n) },
 		aperiodic: zero,
+		taxableOnly: zero,
 		employment: single,
 	};
 }
@@ -295,6 +312,7 @@ function daily(pay: string, days: string): MonthInput {
 		code: A0N,
 		pay: { kind: "daily", pay: chf(pay), days: ratio(BigInt(days), 1n) },
 		aperiodic: zero,
+		taxableOnly: zero,
 		employment: single,
 	};
 }
@@ -308,7 +326,7 @@ describe("rateDefiningSalary", () => {
 
 	test("§ 6.4 example 5: 60% job gives 5666.67 (exact fraction, no rounding)", () => {
 		const result = rateDefiningSalary(
-			monthly("3400", { kind: "ownLevelOnly", ownPercent: 60 }),
+			monthly("3400", { kind: "ownLevelOnly", ownPercent: pct("60") }),
 			ZH_2026,
 		);
 		expectRatio(result, ratio(34000000n, 60n));
@@ -326,6 +344,54 @@ describe("rateDefiningSalary", () => {
 			ZH_2026,
 		);
 		expectChf(result, "6375");
+	});
+
+	// source: KS 45 § 6.4 example 9. The example uses the median of 2019. The file copy sets MED to 5,425.
+	test("§ 6.4 example 9: 500 plus the median 5,425 gives 5,925", () => {
+		const file2019 = { ...ZH_2026, medians: { MED: chf("5425") } };
+		const result = rateDefiningSalary(
+			monthly("500", { kind: "noLevel" }),
+			file2019,
+		);
+		expectChf(result, "5925");
+	});
+
+	// source: KS 45 § 6.5 example 2, R. AG: monthly pay 1,540 at the level 38.46% (70 hours / 182), shown as 4,004
+	test("§ 6.5 example 2: the decimal level 38.46% gives 4004.16", () => {
+		const result = rateDefiningSalary(
+			monthly("1540", { kind: "ownLevelOnly", ownPercent: pct("38.46") }),
+			ZH_2026,
+		);
+		expectRatio(result, ratio(154000n * 100n * 100n, 3846n));
+		expect(ratioEquals(result, ratioOf(chf("4004.16")))).toBe(false);
+		expect(roundHalfUp(result, 1n)).toBe(400416n);
+	});
+
+	test("decimal levels are exact: 37.5% of 100%", () => {
+		const result = rateDefiningSalary(
+			monthly("3000", {
+				kind: "levels",
+				ownPercent: pct("37.5"),
+				totalPercent: pct("100"),
+			}),
+			ZH_2026,
+		);
+		expectChf(result, "8000");
+	});
+
+	test("the level 100% (own equals total) converts nothing", () => {
+		expectChf(
+			rateDefiningSalary(
+				monthly("3000", { kind: "ownLevelOnly", ownPercent: pct("100") }),
+				ZH_2026,
+			),
+			"3000",
+		);
+	});
+
+	test("taxableOnly is not rate-defining", () => {
+		const input = { ...monthly("3000", single), taxableOnly: chf("999") };
+		expectChf(rateDefiningSalary(input, ZH_2026), "3000");
 	});
 
 	test("§ 6.4 no level: a file without MED throws", () => {
@@ -350,7 +416,7 @@ describe("rateDefiningSalary", () => {
 });
 
 describe("rateDefiningSalary throws", () => {
-	const levels = (ownPercent: number, totalPercent: number): Employment => ({
+	const levels = (ownPercent: Ratio, totalPercent: Ratio): Employment => ({
 		kind: "levels",
 		ownPercent,
 		totalPercent,
@@ -358,24 +424,49 @@ describe("rateDefiningSalary throws", () => {
 	const throwing: { name: string; input: MonthInput }[] = [
 		{
 			name: "ownPercent 0",
-			input: monthly("1000", { kind: "ownLevelOnly", ownPercent: 0 }),
+			input: monthly("1000", { kind: "ownLevelOnly", ownPercent: pct("0") }),
 		},
 		{
 			name: "ownPercent 101",
-			input: monthly("1000", { kind: "ownLevelOnly", ownPercent: 101 }),
+			input: monthly("1000", { kind: "ownLevelOnly", ownPercent: pct("101") }),
 		},
 		{
-			name: "ownPercent 50.5",
-			input: monthly("1000", { kind: "ownLevelOnly", ownPercent: 50.5 }),
+			name: "ownPercent negative",
+			input: monthly("1000", { kind: "ownLevelOnly", ownPercent: pct("-5") }),
+		},
+		{
+			name: "totalPercent 0",
+			input: monthly("1000", levels(pct("0"), pct("0"))),
+		},
+		{
+			name: "totalPercent negative",
+			input: monthly("1000", levels(pct("10"), pct("-50"))),
+		},
+		{
+			name: "ownPercent 100.01 (decimal above the range)",
+			input: monthly("1000", {
+				kind: "ownLevelOnly",
+				ownPercent: pct("100.01"),
+			}),
+		},
+		{
+			name: "ownPercent just above totalPercent (50.01 of 50)",
+			input: monthly("1000", levels(pct("50.01"), pct("50"))),
 		},
 		{
 			name: "ownPercent above totalPercent",
-			input: monthly("1000", levels(60, 50)),
+			input: monthly("1000", levels(pct("60"), pct("50"))),
 		},
-		{ name: "totalPercent 101", input: monthly("1000", levels(50, 101)) },
+		{
+			name: "totalPercent 101",
+			input: monthly("1000", levels(pct("50"), pct("101"))),
+		},
 		{
 			name: "hourly pay with a second job",
-			input: { ...hourly("1000", "10"), employment: levels(50, 100) },
+			input: {
+				...hourly("1000", "10"),
+				employment: levels(pct("50"), pct("100")),
+			},
 		},
 		{
 			name: "daily pay with total income known",

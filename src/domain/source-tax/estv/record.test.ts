@@ -192,6 +192,56 @@ describe("parseTariffFile", () => {
 			message: /line 2: field rate/,
 		},
 		{
+			name: "canton differs from the header",
+			text: file([
+				line({ code: "A0N", from: 100, width: 100, rate: 1 }),
+				line({ canton: "BE", code: "A1N", from: 100, width: 100, rate: 1 }),
+			]),
+			message: /line 3: canton "BE" differs from the header/,
+		},
+		{
+			name: "valid-from differs",
+			text: file([
+				line({ code: "A0N", from: 100, width: 100, rate: 1 }),
+				line({
+					code: "A1N",
+					validFrom: "20270101",
+					from: 100,
+					width: 100,
+					rate: 1,
+				}),
+			]),
+			message: /line 3: valid-from 20270101 differs from 20260101/,
+		},
+		{
+			name: "no data records",
+			text: file([]),
+			message: /the file has no data records/,
+		},
+		{
+			name: "record 11 HEN with a children field of 1",
+			text: file([
+				line({
+					type: "11",
+					code: "HEN",
+					from: 100,
+					width: 100,
+					children: 1,
+					rate: 2500,
+				}),
+			]),
+			message:
+				/line 2: children field 1 does not match code HEN \(expected 0\)/,
+		},
+		{
+			name: "Q9N with a children field of 9",
+			text: file([
+				line({ code: "Q9N", from: 100, width: 100, children: 9, rate: 450 }),
+			]),
+			message:
+				/line 2: children field 9 does not match code Q9N \(expected 0\)/,
+		},
+		{
 			name: "unknown record type",
 			text: file([
 				line({ type: "07", code: "A0N", from: 100, width: 100, rate: 1 }),
@@ -221,5 +271,17 @@ describe("tariffFileFromData", () => {
 				fees: {},
 			}),
 		).toThrow();
+	});
+});
+
+describe("parseTariffFile with a code that is an object property", () => {
+	// source: spec.md § 6 (tables are keyed by the code in the file)
+	test("a table named `valueOf` is read as a table", () => {
+		const text = file([
+			line({ code: "valueOf", from: 100, width: 100, children: 0, rate: 1 }),
+		]);
+		const tables = parseTariffFile(text).tables;
+		expect(Object.keys(tables)).toEqual(["valueOf"]);
+		expect(Object.hasOwn(tables, "valueOf")).toBe(true);
 	});
 });

@@ -8,15 +8,15 @@ import {
 	type Ratio,
 	ratio,
 	ratioAdd,
+	ratioCompare,
 	ratioDiv,
 	ratioMul,
 	ratioOf,
 } from "../money.ts";
-import type { TariffCode } from "../zurich/codes.ts";
 import { type Period, socialInsuranceDays } from "./sv-days.ts";
 
-export type MonthInput = {
-	code: TariffCode;
+export type MonthInput<Code extends string> = {
+	code: Code;
 	pay:
 		| {
 				kind: "monthly";
@@ -34,12 +34,20 @@ export type MonthInput = {
 		| { kind: "daily"; pay: Rappen; days: Ratio }; // KS 45 § 6.5
 	/** Salary-certificate items 3, 4 and 5. It is not converted (Swissdec § 10.6.1). */
 	aperiodic: Rappen;
-	/** KS 45 § 6.4, ZStB 87.3 no. 9. */
+	/**
+	 * Taxable pay that does not enter the rate-defining salary, for example sick pay from the
+	 * employer to an hourly employee (KS 45 § 6.5 example 6).
+	 */
+	taxableOnly: Rappen;
+	/**
+	 * KS 45 § 6.4, ZStB 87.3 no. 9. Levels are percent values as exact ratios,
+	 * with 0 < ownPercent <= totalPercent <= 100. Decimal levels are allowed.
+	 */
 	employment:
 		| { kind: "single" }
 		| { kind: "totalIncomeKnown"; otherPeriodic: Rappen }
-		| { kind: "levels"; ownPercent: number; totalPercent: number }
-		| { kind: "ownLevelOnly"; ownPercent: number }
+		| { kind: "levels"; ownPercent: Ratio; totalPercent: Ratio }
+		| { kind: "ownLevelOnly"; ownPercent: Ratio }
 		| { kind: "noLevel" };
 };
 
@@ -50,9 +58,13 @@ const DAYS_PER_MONTH = ratio(21667n, 1000n);
 /** Calendar days of one month for the rate (Swissdec § 10.6.1, QST-Tage). */
 const QST_DAYS = 30n;
 
-function checkPercent(value: number, name: string): void {
-	if (!Number.isInteger(value) || value < 1 || value > 100) {
-		throw new Error(`${name} must be an integer from 1 to 100, got ${value}`);
+const HUNDRED = ratio(100n, 1n);
+
+function checkPercent(value: Ratio, name: string, max: Ratio): void {
+	if (value.num <= 0n || ratioCompare(value, max) > 0) {
+		throw new Error(
+			`${name} must be above 0 and at most ${max.num}/${max.den}, got ${value.num}/${value.den}`,
+		);
 	}
 }
 
@@ -65,7 +77,7 @@ function positive(value: Ratio, name: string): Ratio {
 
 function applyEmployment(
 	periodicPart: Ratio,
-	employment: MonthInput["employment"],
+	employment: MonthInput<string>["employment"],
 	file: TariffFile,
 ): Ratio {
 	switch (employment.kind) {
@@ -74,22 +86,20 @@ function applyEmployment(
 		case "totalIncomeKnown":
 			return ratioAdd(periodicPart, ratioOf(employment.otherPeriodic));
 		case "levels": {
-			checkPercent(employment.ownPercent, "ownPercent");
-			checkPercent(employment.totalPercent, "totalPercent");
-			if (employment.ownPercent > employment.totalPercent) {
-				throw new Error("ownPercent must not exceed totalPercent");
-			}
+			checkPercent(employment.totalPercent, "totalPercent", HUNDRED);
+			checkPercent(
+				employment.ownPercent,
+				"ownPercent",
+				employment.totalPercent,
+			);
 			return ratioMul(
-				ratioDiv(periodicPart, ratio(BigInt(employment.ownPercent), 1n)),
-				ratio(BigInt(employment.totalPercent), 1n),
+				ratioDiv(periodicPart, employment.ownPercent),
+				employment.totalPercent,
 			);
 		}
 		case "ownLevelOnly": {
-			checkPercent(employment.ownPercent, "ownPercent");
-			return ratioMul(
-				ratioDiv(periodicPart, ratio(BigInt(employment.ownPercent), 1n)),
-				ratio(100n, 1n),
-			);
+			checkPercent(employment.ownPercent, "ownPercent", HUNDRED);
+			return ratioMul(ratioDiv(periodicPart, employment.ownPercent), HUNDRED);
 		}
 		case "noLevel": {
 			const median = file.medians.MED;
@@ -103,7 +113,10 @@ function applyEmployment(
 	}
 }
 
-export function rateDefiningSalary(input: MonthInput, file: TariffFile): Ratio {
+export function rateDefiningSalary<Code extends string>(
+	input: MonthInput<Code>,
+	file: TariffFile,
+): Ratio {
 	const { pay, employment } = input;
 	let converted: Ratio;
 	switch (pay.kind) {

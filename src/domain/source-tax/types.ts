@@ -1,9 +1,8 @@
 import { z } from "zod";
-import type { TariffCode } from "./zurich/codes.ts";
 
 export const Canton = z.enum(["ZH"]);
 export type Canton = z.infer<typeof Canton>;
 
-export type TariffResult =
-	| { kind: "code"; code: TariffCode; remark: string | null }
+export type TariffResult<Code extends string> =
+	| { kind: "code"; code: Code; remark: string | null }
 	| { kind: "noSourceTax"; text: string; remark: string | null };

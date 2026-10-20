@@ -17,7 +17,9 @@ export function rateFor(
 	code: string,
 	rateDefining: Ratio,
 ): { rate: number; minTax: Rappen; band: Band | null } {
-	const bands = file.tables[code];
+	const bands = Object.hasOwn(file.tables, code)
+		? file.tables[code]
+		: undefined;
 	if (bands === undefined || bands.length === 0) {
 		throw new Error(`Unknown tariff code: ${code}`);
 	}

@@ -70,8 +70,8 @@ Field names and the mapping to the calculator names: `plan.md` of plan 2 § 1 ("
 - on `incomeType`: `earned` has `civilStatus`, `churchMember`, `children`, `residence`; `replacement` has `residence` only;
 - on `civilStatus`: `married` adds `spouseEmployed`; `single` has no spouse field;
 - `children` on `hasChildren`: `false` has no list; `true` has `list` with at least one child. A married person's child is a `MarriedChild`; a single person's child is an `UnmarriedChild`;
-- `MarriedChild` and `UnmarriedChild`: one union member per row of `calculator-spec.md` § 4.3 and § 4.2. A member holds exactly the answers that are visible on that row (§ 4.1);
-- `residence`: one member per row of § 5.1.
+- `MarriedChild` and `UnmarriedChild`: one union member per answer path of `calculator-spec.md` § 4.3 and § 4.2. A member holds exactly the answers that are visible on that path (§ 4.1). When two rows differ only in the value of the last answer, they share one member, and the result function reads that answer. Each member cites its rows;
+- `residence`: one member per answer path of § 5.1, with the same rule.
 
 Types come from `z.infer` only.
 
@@ -167,18 +167,19 @@ Day number `n(d)` (KS 45 § 6.6, D5): day 31 is 30. The last day of February is 
 ## 10. Rate-defining salary (`monthly/rate-defining.ts`)
 
 ```ts
-type MonthInput = {
-  code: TariffCode;
+type MonthInput<Code extends string> = {
+  code: Code;
   pay:
     | { kind: "monthly"; periodic: Rappen; thirteenthMonth: Rappen; period: Period }
     | { kind: "hourly"; pay: Rappen; hours: Ratio }   // KS 45 § 6.5
     | { kind: "daily"; pay: Rappen; days: Ratio };    // KS 45 § 6.5
   aperiodic: Rappen;
+  taxableOnly: Rappen;                                 // taxable, not rate-defining (KS 45 § 6.5 example 6)
   employment:                                          // KS 45 § 6.4, ZStB 87.3 no. 9
     | { kind: "single" }
     | { kind: "totalIncomeKnown"; otherPeriodic: Rappen }
-    | { kind: "levels"; ownPercent: number; totalPercent: number }
-    | { kind: "ownLevelOnly"; ownPercent: number }
+    | { kind: "levels"; ownPercent: Ratio; totalPercent: Ratio }
+    | { kind: "ownLevelOnly"; ownPercent: Ratio }
     | { kind: "noLevel" };
 };
 ```
@@ -193,17 +194,19 @@ type MonthInput = {
   - `noLevel`: `p + file.medians.MED`.
   Then add `aperiodic` without conversion.
 - Hourly: `pay / hours × 180 + aperiodic`. Daily: `pay / days × 21667/1000 + aperiodic`. `employment` must be `single` (KS 45 § 6.5 covers more than one job). Else throw.
-- Percent values are integers 1–100, `ownPercent ≤ totalPercent`. Else throw.
+- Percent values are exact ratios with `0 < ownPercent ≤ totalPercent ≤ 100`. Decimal values such as 37.5% or hours ÷ 182 are allowed. Else throw.
+- `taxableOnly`: taxable pay that does not enter the rate-defining salary, for example sick pay from the employer to an hourly employee (KS 45 § 6.5 example 6).
+- The monthly modules are national. They do not import from `zurich/`. The code type is a type parameter; the Zurich module uses `TariffCode`.
 
-`rateDefiningSalary(input, file): Ratio`.
+`rateDefiningSalary<Code>(input, file): Ratio`.
 
 ## 11. Tax (`monthly/tax.ts`)
 
 ```ts
 type TaxOptions = { roundingStep: 5 | 1 };   // Rappen; default 5 (D1)
-sourceTax(input: MonthInput, file: TariffFile, options?: TaxOptions): {
-  code: TariffCode;
-  taxableSalary: Rappen;       // periodic + thirteenthMonth + aperiodic, or pay + aperiodic
+sourceTax<Code extends string>(input: MonthInput<Code>, file: TariffFile, options?: TaxOptions): {
+  code: Code;
+  taxableSalary: Rappen;       // periodic + thirteenthMonth + aperiodic + taxableOnly, or pay + aperiodic + taxableOnly
   rateDefiningSalary: Ratio;
   rate: number;                // hundredths of a percent
   tax: Rappen;

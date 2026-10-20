@@ -3,9 +3,10 @@ import type { TariffFile } from "../estv/record.ts";
 import { chf, rappen, ratio, ratioEquals, ratioOf } from "../money.ts";
 import { TariffCode } from "../zurich/codes.ts";
 import { ZH_2026 } from "../zurich/tariff-2026.generated.ts";
-import type { MonthInput } from "./rate-defining.ts";
+import type { MonthInput as GenericMonthInput } from "./rate-defining.ts";
 import { sourceTax } from "./tax.ts";
 
+type MonthInput = GenericMonthInput<TariffCode>;
 const zero = rappen(0);
 const date = (year: number, month: number, day: number) => ({
 	year,
@@ -33,6 +34,7 @@ function monthly(
 			period: options.period ?? { kind: "fullMonth" },
 		},
 		aperiodic: options.aperiodic ?? zero,
+		taxableOnly: zero,
 		employment: { kind: "single" },
 	};
 }
@@ -58,6 +60,20 @@ type Row = {
 	rate: number;
 	tax: string;
 };
+
+// Named inputs. Several tests use them.
+const START_ON_15_MARCH = monthly("A0N", "3200", {
+	period: { kind: "start", date: date(2026, 3, 15) },
+});
+const CENTS_AT_BAND_EDGE = monthly("A0N", "850.40");
+const SWISSDEC_EXAMPLE_1 = monthly("A0N", "3000", {
+	thirteenthMonth: "1250",
+	period: { kind: "end", date: date(2026, 3, 15) },
+});
+const SWISSDEC_EXAMPLE_2 = monthly("A0N", "200", {
+	thirteenthMonth: "5016.65",
+	period: { kind: "end", date: date(2026, 11, 1) },
+});
 
 // source: plan.md appendix "worked examples (2026 Zurich rates)"
 const appendix: Row[] = [
@@ -103,9 +119,7 @@ const appendix: Row[] = [
 	},
 	{
 		source: "appendix 6: start on 15 March, 16 days",
-		input: monthly("A0N", "3200", {
-			period: { kind: "start", date: date(2026, 3, 15) },
-		}),
+		input: START_ON_15_MARCH,
 		taxable: "3200",
 		rateDefining: "6000",
 		rate: 679,
@@ -129,7 +143,7 @@ const appendix: Row[] = [
 	},
 	{
 		source: "appendix 9: cents at a band edge (D3)",
-		input: monthly("A0N", "850.40"),
+		input: CENTS_AT_BAND_EDGE,
 		taxable: "850.40",
 		rateDefining: "850.40",
 		rate: 24,
@@ -138,10 +152,7 @@ const appendix: Row[] = [
 	// source: Swissdec ELM 6.0 § 10.6.1.2 (decision D2)
 	{
 		source: "Swissdec § 10.6.1.2 example 1: exit on 15 March",
-		input: monthly("A0N", "3000", {
-			thirteenthMonth: "1250",
-			period: { kind: "end", date: date(2026, 3, 15) },
-		}),
+		input: SWISSDEC_EXAMPLE_1,
 		taxable: "4250",
 		rateDefining: "8500",
 		rate: 909,
@@ -149,10 +160,7 @@ const appendix: Row[] = [
 	},
 	{
 		source: "Swissdec § 10.6.1.2 example 2: exit on 1 November",
-		input: monthly("A0N", "200", {
-			thirteenthMonth: "5016.65",
-			period: { kind: "end", date: date(2026, 11, 1) },
-		}),
+		input: SWISSDEC_EXAMPLE_2,
 		taxable: "5216.65",
 		rateDefining: "156499.50",
 		rate: 3127,
@@ -175,7 +183,7 @@ describe("sourceTax with the real 2026 Zurich file", () => {
 	}
 
 	test("appendix 6 keeps the exact rate-defining salary (3200 / 16 x 30)", () => {
-		const result = sourceTax(appendix[5]?.input as MonthInput, ZH_2026);
+		const result = sourceTax(START_ON_15_MARCH, ZH_2026);
 		expect(
 			ratioEquals(result.rateDefiningSalary, ratio(320000n * 30n, 16n)),
 		).toBe(true);
@@ -216,36 +224,30 @@ describe("rounding", () => {
 	}
 
 	test("a half rounds up: 4,250 x 9.09% = 386.325 -> 386.35 (step 5)", () => {
-		expect(sourceTax(appendix[9]?.input as MonthInput, ZH_2026).tax).toBe(
-			chf("386.35"),
-		);
+		expect(sourceTax(SWISSDEC_EXAMPLE_1, ZH_2026).tax).toBe(chf("386.35"));
 	});
 
 	test("roundingStep 1: 386.325 -> 386.33", () => {
 		expect(
-			sourceTax(appendix[9]?.input as MonthInput, ZH_2026, { roundingStep: 1 })
-				.tax,
+			sourceTax(SWISSDEC_EXAMPLE_1, ZH_2026, { roundingStep: 1 }).tax,
 		).toBe(chf("386.33"));
 	});
 
 	test("roundingStep 1: appendix 9, 2.04096 -> 2.04", () => {
 		expect(
-			sourceTax(appendix[8]?.input as MonthInput, ZH_2026, { roundingStep: 1 })
-				.tax,
+			sourceTax(CENTS_AT_BAND_EDGE, ZH_2026, { roundingStep: 1 }).tax,
 		).toBe(chf("2.04"));
 	});
 
 	test("roundingStep 1: Swissdec example 2, 1631.246455 -> 1631.25", () => {
 		expect(
-			sourceTax(appendix[10]?.input as MonthInput, ZH_2026, { roundingStep: 1 })
-				.tax,
+			sourceTax(SWISSDEC_EXAMPLE_2, ZH_2026, { roundingStep: 1 }).tax,
 		).toBe(chf("1631.25"));
 	});
 
 	test("the default step is 5", () => {
-		expect(sourceTax(appendix[8]?.input as MonthInput, ZH_2026).tax).toBe(
-			sourceTax(appendix[8]?.input as MonthInput, ZH_2026, { roundingStep: 5 })
-				.tax,
+		expect(sourceTax(CENTS_AT_BAND_EDGE, ZH_2026).tax).toBe(
+			sourceTax(CENTS_AT_BAND_EDGE, ZH_2026, { roundingStep: 5 }).tax,
 		);
 	});
 });
@@ -278,6 +280,27 @@ describe("minimum tax and low pay", () => {
 		expect(sourceTax(input, flatFile(1000)).taxableSalary).toBe(chf("1124"));
 	});
 
+	// source: KS 45 § 6.5 example 6 (75 hours at 35.00, sick pay 2,000, family allowance 1,200)
+	test("§ 6.5 example 6: the tax uses the taxable salary 5,825, the rate uses 7,500", () => {
+		const input: MonthInput = {
+			...hourlyInput("2625", 75),
+			aperiodic: chf("1200"),
+			taxableOnly: chf("2000"),
+		};
+		const result = sourceTax(input, flatFile(1000));
+		expect(result.taxableSalary).toBe(chf("5825"));
+		expect(ratioEquals(result.rateDefiningSalary, ratioOf(chf("7500")))).toBe(
+			true,
+		);
+		// 5,825.00 x 10% = 582.50
+		expect(result.tax).toBe(chf("582.50"));
+	});
+
+	test("taxableOnly is added to the taxable salary of monthly pay", () => {
+		const input = { ...monthly("A0N", "1000"), taxableOnly: chf("500") };
+		expect(sourceTax(input, flatFile(1000)).taxableSalary).toBe(chf("1500"));
+	});
+
 	test("an unknown code throws", () => {
 		const input = { ...monthly("A0N", "1000"), code: TariffCode.parse("B0N") };
 		expect(() => sourceTax(input, flatFile(100))).toThrow(/B0N/);
@@ -289,6 +312,7 @@ function hourlyInput(pay: string, hours: number): MonthInput {
 		code: TariffCode.parse("A0N"),
 		pay: { kind: "hourly", pay: chf(pay), hours: ratio(BigInt(hours), 1n) },
 		aperiodic: zero,
+		taxableOnly: zero,
 		employment: { kind: "single" },
 	};
 }

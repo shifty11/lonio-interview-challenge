@@ -27,7 +27,7 @@ const noChildren = { hasChildren: false } as const;
 const earnedSingle = { incomeType: "earned", civilStatus: "single" } as const;
 const earnedMarried = { incomeType: "earned", civilStatus: "married" } as const;
 
-type Expected = TariffResult;
+type Expected = TariffResult<TariffCode>;
 
 type Case = { source: string; answers: unknown; expected: Expected };
 

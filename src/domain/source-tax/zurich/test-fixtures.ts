@@ -27,7 +27,7 @@ export const marriedSoleCustodyChild = {
 
 export const otherChild = { group: "other" } as const;
 
-/** Child that neither justifies H nor counts (calculator-spec.md § 4.2 row 11). */
+/** Child that neither justifies H nor counts (calculator-spec.md § 4.2 row 10). */
 export const noCountChild = {
 	group: "underage",
 	childInSameHousehold: false,

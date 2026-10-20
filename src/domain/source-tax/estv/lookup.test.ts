@@ -120,3 +120,12 @@ describe("rateFor on a hand-built file", () => {
 		expect(rateFor(file, "T", at(99999999)).rate).toBe(20);
 	});
 });
+
+describe("rateFor reads only own tables", () => {
+	// source: spec.md § 8 (an unknown code throws); "constructor" is a property of every object, not a table
+	test("code `constructor` throws unknown code", () => {
+		expect(() => rateFor(ZH_2026, "constructor", at(chf("1000")))).toThrow(
+			/Unknown tariff code: constructor/,
+		);
+	});
+});

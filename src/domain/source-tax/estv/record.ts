@@ -206,7 +206,8 @@ export function parseTariffFileWithWarnings(text: string): ParsedTariffFile {
 			minTax: minTaxOrMedian,
 			rate,
 		};
-		const table = tables[code] ?? [];
+		const table =
+			(Object.hasOwn(tables, code) ? tables[code] : undefined) ?? [];
 		table.push(band);
 		tables[code] = table;
 		lineOfBand.set(band, lineNo);

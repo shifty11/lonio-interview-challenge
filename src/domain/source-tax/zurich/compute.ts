@@ -69,7 +69,9 @@ function letterAndDigit(
 	}
 }
 
-export function computeTariffCode(answers: ZhAnswers): TariffResult {
+export function computeTariffCode(
+	answers: ZhAnswers,
+): TariffResult<TariffCode> {
 	const residence = residenceResult(answers.residence);
 	const remark = residence.remark === null ? null : DTA_RESERVATION_TEXT;
 

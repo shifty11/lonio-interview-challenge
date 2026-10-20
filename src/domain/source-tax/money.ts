@@ -85,7 +85,7 @@ export function formatRatioChf(value: Ratio): string {
 	const cents = roundHalfUp(value, 1n);
 	const sign = cents < 0n ? "-" : "";
 	const abs = cents < 0n ? -cents : cents;
-	const whole = (abs / 100n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, "'");
+	const whole = (abs / 100n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 	return `${sign}${whole}.${(abs % 100n).toString().padStart(2, "0")}`;
 }
 

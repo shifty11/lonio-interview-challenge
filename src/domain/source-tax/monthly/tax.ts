@@ -13,7 +13,6 @@ import {
 	ratioCompare,
 	roundHalfUp,
 } from "../money.ts";
-import type { TariffCode } from "../zurich/codes.ts";
 import { type MonthInput, rateDefiningSalary } from "./rate-defining.ts";
 
 export type TaxOptions = {
@@ -26,25 +25,30 @@ const DEFAULT_OPTIONS: TaxOptions = { roundingStep: 5 };
 /** A rate has two decimals as a percentage: hundredths of a percent, so divide by 10,000. */
 const RATE_DENOMINATOR = 10000n;
 
-function taxableSalaryOf(input: MonthInput): Rappen {
+function taxableSalaryOf(input: MonthInput<string>): Rappen {
 	const { pay } = input;
 	switch (pay.kind) {
 		case "monthly":
-			return rappen(pay.periodic + pay.thirteenthMonth + input.aperiodic);
+			return rappen(
+				pay.periodic +
+					pay.thirteenthMonth +
+					input.aperiodic +
+					input.taxableOnly,
+			);
 		case "hourly":
 		case "daily":
-			return rappen(pay.pay + input.aperiodic);
+			return rappen(pay.pay + input.aperiodic + input.taxableOnly);
 		default:
 			return assertNever(pay);
 	}
 }
 
-export function sourceTax(
-	input: MonthInput,
+export function sourceTax<Code extends string>(
+	input: MonthInput<Code>,
 	file: TariffFile,
 	options: TaxOptions = DEFAULT_OPTIONS,
 ): {
-	code: TariffCode;
+	code: Code;
 	taxableSalary: Rappen;
 	rateDefiningSalary: Ratio;
 	/** Hundredths of a percent. */

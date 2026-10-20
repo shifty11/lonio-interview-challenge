@@ -13,29 +13,35 @@ import {
 } from "./money.ts";
 
 describe("rappen and chf", () => {
+	// source: spec.md § 4 (money is an integer number of Rappen)
 	test("chf parses amounts with 0, 1 and 2 decimals", () => {
 		expect(chf("850.40")).toBe(rappen(85040));
 		expect(chf("6000")).toBe(rappen(600000));
 		expect(chf("0.5")).toBe(rappen(50));
 	});
+	// source: spec.md § 4 (no fraction of a Rappen)
 	test("chf rejects three decimals", () => {
 		expect(() => chf("1.234")).toThrow();
 	});
+	// source: spec.md § 4 (`Number.isSafeInteger`)
 	test("rappen rejects a fraction", () => {
 		expect(() => rappen(1.5)).toThrow();
 	});
 });
 
 describe("ratio", () => {
+	// source: spec.md § 4 (`den > 0`)
 	test("rejects a non-positive denominator", () => {
 		expect(() => ratio(1n, 0n)).toThrow();
 		expect(() => ratio(1n, -1n)).toThrow();
 	});
+	// source: spec.md § 4 (compare by cross-multiplication in bigint)
 	test("compares by cross-multiplication", () => {
 		expect(ratioEquals(ratio(1n, 2n), ratio(2n, 4n))).toBe(true);
 		expect(ratioCompare(ratio(1n, 3n), ratio(1n, 2n))).toBe(-1);
 		expect(ratioCompare(ratio(3n, 2n), ratio(1n, 1n))).toBe(1);
 	});
+	// source: spec.md § 4 (exact arithmetic)
 	test("mul and div keep the denominator positive", () => {
 		const half = ratioDiv(ratioOf(rappen(1)), ratioOf(rappen(-2)));
 		expect(half.den > 0n).toBe(true);
@@ -100,8 +106,9 @@ describe("roundHalfUp", () => {
 });
 
 describe("formatChf", () => {
+	// source: plan.md appendix (display format of the worked examples)
 	test("formats with a thousands separator and two decimals", () => {
-		expect(formatChf(chf("156499.50"))).toBe("156'499.50");
+		expect(formatChf(chf("156499.50"))).toBe("156,499.50");
 		expect(formatChf(chf("8.05"))).toBe("8.05");
 	});
 });

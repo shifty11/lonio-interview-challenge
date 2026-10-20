@@ -56,6 +56,7 @@ describe("generated Zurich 2026 data", () => {
 describe("the real file", () => {
 	test("parses with no error and gives only rate warnings", () => {
 		const { warnings } = parseTariffFileWithWarnings(sourceText);
+		expect(warnings.length).toBe(1898);
 		// plan.md § 11.1: the low bands carry the personal tax, so rates fall at the start of a table.
 		expect(
 			warnings.every((w) =>

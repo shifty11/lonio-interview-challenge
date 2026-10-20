@@ -10,17 +10,26 @@ import {
 	type Rappen,
 	rappen,
 } from "../src/domain/source-tax/money.ts";
-import type { MonthInput } from "../src/domain/source-tax/monthly/rate-defining.ts";
+import type { MonthInput as GenericMonthInput } from "../src/domain/source-tax/monthly/rate-defining.ts";
 import type { Period } from "../src/domain/source-tax/monthly/sv-days.ts";
 import { sourceTax } from "../src/domain/source-tax/monthly/tax.ts";
 import { TariffCode } from "../src/domain/source-tax/zurich/codes.ts";
 import { ZH_2026 } from "../src/domain/source-tax/zurich/tariff-2026.generated.ts";
 
+type MonthInput = GenericMonthInput<TariffCode>;
+
 type Example = {
 	name: string;
 	input: MonthInput;
 	/** Expected values, as the plan.md appendix prints them. */
-	expected: { rateDefining: string; band: string; rate: string; tax: string };
+	expected: {
+		taxable: string;
+		rateDefining: string;
+		band: string;
+		rate: string;
+		raw: string;
+		tax: string;
+	};
 };
 
 const zero = rappen(0);
@@ -46,6 +55,7 @@ function monthly(
 			period: options.period ?? { kind: "fullMonth" },
 		},
 		aperiodic: options.aperiodic === undefined ? zero : chf(options.aperiodic),
+		taxableOnly: zero,
 		employment: { kind: "single" },
 	};
 }
@@ -55,9 +65,11 @@ const examples: Example[] = [
 		name: "Full month",
 		input: monthly("A0N", "6000"),
 		expected: {
-			rateDefining: "6'000.00",
+			taxable: "6,000.00",
+			rateDefining: "6,000.00",
 			band: "5,951-6,000",
 			rate: "6.79%",
+			raw: "407.40",
 			tax: "407.40",
 		},
 	},
@@ -65,9 +77,11 @@ const examples: Example[] = [
 		name: "Married, sole earner, 2 children, church",
 		input: monthly("B2Y", "9000"),
 		expected: {
-			rateDefining: "9'000.00",
+			taxable: "9,000.00",
+			rateDefining: "9,000.00",
 			band: "8,951-9,000",
 			rate: "3.28%",
+			raw: "295.20",
 			tax: "295.20",
 		},
 	},
@@ -75,9 +89,11 @@ const examples: Example[] = [
 		name: "Married, dual earner",
 		input: monthly("C0N", "7500"),
 		expected: {
-			rateDefining: "7'500.00",
+			taxable: "7,500.00",
+			rateDefining: "7,500.00",
 			band: "7,451-7,500",
 			rate: "8.89%",
+			raw: "666.75",
 			tax: "666.75",
 		},
 	},
@@ -85,9 +101,11 @@ const examples: Example[] = [
 		name: "Single parent, 1 child, church",
 		input: monthly("H1Y", "5200"),
 		expected: {
-			rateDefining: "5'200.00",
+			taxable: "5,200.00",
+			rateDefining: "5,200.00",
 			band: "5,151-5,200",
 			rate: "1.95%",
+			raw: "101.40",
 			tax: "101.40",
 		},
 	},
@@ -95,9 +113,11 @@ const examples: Example[] = [
 		name: "Replacement income from insurer",
 		input: monthly("G9N", "3000"),
 		expected: {
-			rateDefining: "3'000.00",
+			taxable: "3,000.00",
+			rateDefining: "3,000.00",
 			band: "2,951-3,000",
 			rate: "5.19%",
+			raw: "155.70",
 			tax: "155.70",
 		},
 	},
@@ -107,9 +127,11 @@ const examples: Example[] = [
 			period: { kind: "start", date: { year: 2026, month: 3, day: 15 } },
 		}),
 		expected: {
-			rateDefining: "6'000.00",
+			taxable: "3,200.00",
+			rateDefining: "6,000.00",
 			band: "5,951-6,000",
 			rate: "6.79%",
+			raw: "217.28",
 			tax: "217.30",
 		},
 	},
@@ -117,29 +139,35 @@ const examples: Example[] = [
 		name: "Salary 6,000 + bonus 10,000",
 		input: monthly("A0N", "6000", { aperiodic: "10000" }),
 		expected: {
-			rateDefining: "16'000.00",
+			taxable: "16,000.00",
+			rateDefining: "16,000.00",
 			band: "15,951-16,000",
 			rate: "15.95%",
-			tax: "2'552.00",
+			raw: "2,552.00",
+			tax: "2,552.00",
 		},
 	},
 	{
 		name: "High salary",
 		input: monthly("A0N", "120000"),
 		expected: {
-			rateDefining: "120'000.00",
+			taxable: "120,000.00",
+			rateDefining: "120,000.00",
 			band: "from 100,001",
 			rate: "31.27%",
-			tax: "37'524.00",
+			raw: "37,524.00",
+			tax: "37,524.00",
 		},
 	},
 	{
 		name: "Cents at band edge (D3)",
 		input: monthly("A0N", "850.40"),
 		expected: {
+			taxable: "850.40",
 			rateDefining: "850.40",
 			band: "801-850",
 			rate: "0.24%",
+			raw: "2.04096",
 			tax: "2.05",
 		},
 	},
@@ -150,9 +178,11 @@ const examples: Example[] = [
 			period: { kind: "end", date: { year: 2026, month: 3, day: 15 } },
 		}),
 		expected: {
-			rateDefining: "8'500.00",
+			taxable: "4,250.00",
+			rateDefining: "8,500.00",
 			band: "8,451-8,500",
 			rate: "9.09%",
+			raw: "386.325",
 			tax: "386.35",
 		},
 	},
@@ -163,10 +193,12 @@ const examples: Example[] = [
 			period: { kind: "end", date: { year: 2026, month: 11, day: 1 } },
 		}),
 		expected: {
-			rateDefining: "156'499.50",
+			taxable: "5,216.65",
+			rateDefining: "156,499.50",
 			band: "from 100,001",
 			rate: "31.27%",
-			tax: "1'631.25",
+			raw: "1,631.246455",
+			tax: "1,631.25",
 		},
 	},
 ];
@@ -197,7 +229,7 @@ function rawTax(taxable: Rappen, rate: number): string {
 		.padStart(6, "0")
 		.replace(/0+$/, "")
 		.padEnd(2, "0");
-	return `${whole}.${fraction}`;
+	return `${whole.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",")}.${fraction}`;
 }
 
 const rows: string[][] = [
@@ -220,15 +252,19 @@ for (const example of examples) {
 	const table = ZH_2026.tables[result.code] ?? [];
 	const isLast = band !== null && band === table[table.length - 1];
 	const actual = {
+		taxable: formatChf(result.taxableSalary),
+		raw: rawTax(result.taxableSalary, result.rate),
 		rateDefining: formatRatioChf(result.rateDefiningSalary),
 		band: bandLabel(band, isLast),
 		rate: `${(result.rate / 100).toFixed(2)}%`,
 		tax: formatChf(result.tax),
 	};
 	const matches =
+		actual.taxable === example.expected.taxable &&
 		actual.rateDefining === example.expected.rateDefining &&
 		actual.band === example.expected.band &&
 		actual.rate === example.expected.rate &&
+		actual.raw === example.expected.raw &&
 		actual.tax === example.expected.tax;
 	if (!matches) {
 		failed++;
@@ -236,11 +272,11 @@ for (const example of examples) {
 	rows.push([
 		example.name,
 		result.code,
-		formatChf(result.taxableSalary),
+		actual.taxable,
 		actual.rateDefining,
 		actual.band,
 		actual.rate,
-		rawTax(result.taxableSalary, result.rate),
+		actual.raw,
 		actual.tax,
 		matches ? "ok" : `DIFFERS (expected ${JSON.stringify(example.expected)})`,
 	]);
