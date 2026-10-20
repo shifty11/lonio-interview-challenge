@@ -67,12 +67,23 @@ Run each command from the repo root. Each command ran without error when it was 
 
 | Command | Use |
 |---|---|
-| `bun run typecheck` | `tsc --noEmit` over `src` and `scripts` |
+| `bun run typecheck` | `tsc --noEmit` over `src`, `scripts` and `tests` |
 | `bun run lint` | `biome check .` (lint, format check, import order) |
 | `bun run format` | `biome format --write .` |
 | `bun test` | all unit tests (`bunfig.toml` sets the root to `src`) |
 | `bun run gen:tariff` | writes `src/domain/source-tax/zurich/tariff-2026.generated.ts` from `sources/estv/tar26zh.txt`. The file must not change. |
 | `bun run examples` | prints the worked examples of `plans/1-zh-source-tax/plan.md` from the real functions. It exits with code 1 when a value differs. |
+| `docker compose up -d` | starts PostgreSQL 17 on host port 54329. Copy `.env.example` to `.env` first. |
+| `bun install` | installs the packages |
+| `bun run dev` | starts Next.js on port 3000 |
+| `bun run build` | builds the app. The Geist font needs network access. |
+| `bun run gen:enums` | writes the two `native_enum` blocks of `src/prisma/contract.prisma` from the domain lists. A second run gives no diff. |
+| `bun run contract:emit` | runs `gen:enums`, then `prisma contract emit`. It writes `contract.json` and `contract.d.ts` with two-space indent. Restore the committed files when only the whitespace differs. |
+| `bun run db:init` | creates the tables on an empty database |
+| `bun run db:migrate` | applies the migration files |
+| `bun run db:verify` | checks that the database matches the contract |
+| `bun run db:seed` | adds the seven example employees. It does nothing when the table has rows. |
+| `bun run test:e2e` | Playwright tests. They build the app, drop and create the database `lonio_test`, and start the app on port 3100. The database server must run. Run `bunx playwright install chromium` once. |
 | `uv run --with openpyxl python3 scripts/extract-swissdec-appendix.py` | writes `src/domain/source-tax/monthly/swissdec-appendix.generated.ts` from the Swissdec appendix workbook. |
 
 ## Testing

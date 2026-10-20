@@ -17,7 +17,8 @@
 			"!next-env.d.ts",
 			"!src/prisma/contract.json",
 			"!src/prisma/contract.d.ts",
-			"!migrations"
+			"!migrations",
+			"!src/components/ui/input-group.tsx"
 		]
 	},
 	"formatter": {
