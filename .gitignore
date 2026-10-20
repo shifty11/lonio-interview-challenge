@@ -7,3 +7,4 @@ playwright-report/
 test-results/
 tsconfig.tsbuildinfo
 next-env.d.ts
+.playwright-mcp/
