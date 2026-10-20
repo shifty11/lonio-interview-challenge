@@ -1,4 +1,7 @@
-// Playwright global setup: drops and creates the test database `lonio_test`, then runs the init.
+// Resets the test database `lonio_test`: drop, create, init. `playwright.config.ts` runs this file
+// in the `webServer.command`, before the build and before the app starts, so the app never meets
+// a database that is dropped under it. Playwright starts the web server before `globalSetup`,
+// so a `globalSetup` cannot do this job.
 // The database server is the `postgres` service of docker-compose.yml (`docker compose up -d`).
 
 import { execFileSync } from "node:child_process";
@@ -30,11 +33,15 @@ function psql(statement: string): void {
 	);
 }
 
-export default function globalSetup(): void {
+export function resetDatabase(): void {
 	psql(`DROP DATABASE IF EXISTS ${DATABASE} WITH (FORCE)`);
 	psql(`CREATE DATABASE ${DATABASE}`);
 	execFileSync("bun", ["run", "db:init"], {
 		stdio: "inherit",
 		env: { ...process.env, DATABASE_URL: TEST_DATABASE_URL },
 	});
+}
+
+if (import.meta.main) {
+	resetDatabase();
 }

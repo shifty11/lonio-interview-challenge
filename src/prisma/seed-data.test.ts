@@ -27,6 +27,9 @@ describe("seed employees", () => {
 			if (prepared.kind === "missing") {
 				throw new Error(prepared.paths.join(", "));
 			}
+			if (prepared.kind === "invalid") {
+				throw new Error(prepared.issues.map((i) => i.path).join(", "));
+			}
 			const tariff = employeeTariff(prepared.value);
 			const label: string = tariff.kind === "code" ? tariff.code : tariff.kind;
 			expect(label).toBe(expected[name] ?? "unknown");

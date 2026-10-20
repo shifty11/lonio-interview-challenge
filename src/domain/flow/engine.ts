@@ -9,6 +9,12 @@ export type VisibleQuestion = {
 	kind: "question";
 	/** Concrete dot path, for example "children.list.1.sameHousehold". */
 	path: string;
+	/**
+	 * Stable identity of the flow entry, for example "children.list.1.sharedCustody#6". Two label
+	 * variants of one path have two keys. A renderer uses it as the element key and clears the
+	 * value of a path when its key changes.
+	 */
+	key: string;
 	label: string;
 	options: readonly Option[];
 	source: string;
@@ -41,7 +47,7 @@ function walk<Root extends object, Item extends object>(
 	let pruned = {} as Root;
 	const visible: VisibleNode[] = [];
 
-	for (const node of flow) {
+	for (const [nodeIndex, node] of flow.entries()) {
 		switch (node.kind) {
 			case "question": {
 				if (!node.visibleWhen(pruned)) {
@@ -50,6 +56,7 @@ function walk<Root extends object, Item extends object>(
 				visible.push({
 					kind: "question",
 					path: node.id,
+					key: `${node.id}#${nodeIndex}`,
 					label: node.label,
 					options: node.options,
 					source: node.source,
@@ -72,13 +79,14 @@ function walk<Root extends object, Item extends object>(
 					let item = {} as Item;
 					const questions: VisibleQuestion[] = [];
 					const itemPath = `${node.id}.${index}`;
-					for (const question of node.items) {
+					for (const [questionIndex, question] of node.items.entries()) {
 						if (!question.visibleWhen(pruned, item)) {
 							continue;
 						}
 						questions.push({
 							kind: "question",
 							path: `${itemPath}.${question.id}`,
+							key: `${itemPath}.${question.id}#${nodeIndex}.${questionIndex}`,
 							label: question.label,
 							options: question.options,
 							source: question.source,

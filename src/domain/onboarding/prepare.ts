@@ -10,9 +10,13 @@ import {
 	OnboardingSchema,
 } from "./schema.ts";
 
+/** An answer that is present and wrong, with the Zod message, for example "Too long". */
+export type PrepareIssue = { path: string; message: string };
+
 export type PrepareResult =
 	| { kind: "ok"; value: Onboarding }
-	| { kind: "missing"; paths: string[] };
+	| { kind: "missing"; paths: string[] }
+	| { kind: "invalid"; issues: PrepareIssue[] };
 
 const ANSWERS = "sourceTax.answers";
 
@@ -55,7 +59,10 @@ function finish(candidate: unknown, paths: string[]): PrepareResult {
 	}
 	// An answer that is present but invalid, for example a name of more than 100 characters.
 	return {
-		kind: "missing",
-		paths: [...new Set(parsed.error.issues.map((i) => i.path.join(".")))],
+		kind: "invalid",
+		issues: parsed.error.issues.map((issue) => ({
+			path: issue.path.join("."),
+			message: issue.message,
+		})),
 	};
 }

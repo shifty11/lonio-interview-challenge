@@ -92,7 +92,7 @@ Functions:
 
 - `getPath(obj, path)` and `setPath(obj, path, value)`: dot paths, numeric segments index arrays. `setPath` returns a new object and does not mutate the input.
 - `prune(flow, draft)`: walks the nodes in order. It copies an answer only when its question is visible. Each predicate gets the pruned prefix (root) and the pruned item prefix, never the raw draft. A group copies each item. A group that is not visible gives no array. Idempotent: `prune(prune(x)) = prune(x)`.
-- `visibleQuestions(flow, draft)`: the visible nodes of the pruned draft, with concrete paths (`children.list.1.sameHousehold`) and the group items. The renderer reads only this.
+- `visibleQuestions(flow, draft)`: the visible nodes of the pruned draft, with concrete paths (`children.list.1.sameHousehold`), a stable `key` for each flow entry (two label variants of one path have two keys) and the group items. The renderer reads only this and uses `key` as the React key and clears the value of a path when its key changes (a `subscribe` callback of the form), so a new label variant starts empty.
 - `missingAnswers(flow, draft)`: the paths of the visible questions with no answer, in flow order. A visible group with an empty or missing array reports the paths of the first item (`children.list.0.group`), because the schema needs at least one child.
 - `enumerate.ts` (tests only): a depth-first walk over every answer path of a flow, with a bound on the item count of a group.
 
@@ -103,7 +103,7 @@ Rule: a predicate reads earlier questions only. The engine passes the pruned pre
 - `questions.ts`: `zhFlow`, the data of § 2.
 - `schema.ts` adds `ZhDraftSchema`: the same paths as `ZhAnswersSchema`, every leaf optional, `children.list` an array of partial children, `residence` partial. Every enum leaf uses the `z.enum` of the existing file. `z.strictObject` at every level.
 - **Rule R (residence visibility):** the residence questions are visible once `children.hasChildren` is answered (earned income), or at once (replacement income). This deviates from calc-spec § 3 row 7 (see `plan.md`, Fixed decisions). An incomplete child shows in `missingAnswers`. The visibility test cites this rule.
-- **`hasChildren` toggle:** a change to `true` sets `children.list = [{}]`. A change to `false` removes the list. `prune` drops the list when `hasChildren` is not `true`, so the toggle is UI help only.
+- **`hasChildren` toggle:** a change to `true` sets `children.list = [{}]`. A change to `false` sets the list to `[]`. `prune` drops the list when `hasChildren` is not `true`, so the toggle is UI help only.
 - `preview.ts`: `previewTariff(draft: ZhDraft): PreviewResult`. Steps: prune, `missingAnswers`, `ZhAnswersSchema.safeParse`, `computeTariffCode`.
 
 ```ts
@@ -120,12 +120,12 @@ type PreviewResult =
 
 - `countries.ts`: `COUNTRY_CODES` (ISO 3166-1 alpha-2, `as const`, includes `CH`, `DE`, `LI`, `XK`), `Nationality = z.enum(COUNTRY_CODES)`, `countryName(code)` with `Intl.DisplayNames(["en"], { type: "region" })` and the code as fallback.
 - `schema.ts`:
-  - `Name = z.string().trim().min(1, "Required").max(100)`.
+  - `Name = z.string().trim().min(1, "Required").max(100, "Too long")`.
   - `OnboardingDraftSchema = z.strictObject({ firstName: z.string(), lastName: z.string(), nationality: Nationality.optional(), sourceTax: z.strictObject({ canton: z.literal("ZH"), answers: ZhDraftSchema }).optional() })`.
   - `OnboardingSchema`: discriminated union on `nationality`. `CH`: `z.strictObject({ firstName: Name, lastName: Name, nationality: z.literal("CH") })`. Others: `z.strictObject({ firstName: Name, lastName: Name, nationality: Nationality.exclude(["CH"]), sourceTax: z.strictObject({ canton: z.literal("ZH"), answers: ZhAnswersSchema }) })`.
   - Any extra key (for example `tariffCode`) fails both schemas.
 - `employee-tariff.ts`: `employeeTariff(employee: Onboarding): { kind: "swiss" } | TariffResult<TariffCode>`. Exhaustive switch on the branch. It calls the module of `sourceTax.canton` from the registry.
-- `prepareOnboarding(draft: OnboardingDraft): { kind: "ok"; value: Onboarding } | { kind: "missing"; paths: string[] }`. Steps: drop `sourceTax` when the nationality is `CH`; prune the answers; collect missing paths (names, nationality, `sourceTax.answers.<path>`); strict parse. The form resolver and the server both call it. Paths use the RHF form: `sourceTax.answers.children.list.0.group`.
+- `prepareOnboarding(draft: OnboardingDraft): { kind: "ok"; value: Onboarding } | { kind: "missing"; paths: string[] } | { kind: "invalid"; issues: { path: string; message: string }[] }`. `invalid` is an answer that is present and wrong (for example a name of 101 characters); its message is the Zod message. Steps: drop `sourceTax` when the nationality is `CH`; prune the answers; collect missing paths (names, nationality, `sourceTax.answers.<path>`); strict parse. The form resolver and the server both call it. Paths use the RHF form: `sourceTax.answers.children.list.0.group`.
 
 ## 6. Persistence and server (round B)
 
@@ -135,7 +135,7 @@ Prisma 8 API names in `plan.md` § 2 are from the docs of the plan time. Check e
 - `scripts/gen-prisma-enums.ts` writes the two enum blocks between marker comments. A second run gives no diff.
 - `src/server/enums.test.ts`: each database enum equals its domain `z.enum` list (same members, same order). The test reads the emitted contract, not a live database.
 - `src/server/employees.ts`: `EmployeeRepo = { create(e: Onboarding): Promise<{ id: string }>; list(): Promise<EmployeeRow[]> }`. `list` sorts by `createdAt` descending. `EmployeeRow = { id; firstName; lastName; nationality; createdAt; employee: Onboarding | null }`. A row whose stored data fails `OnboardingSchema` gets `employee: null`. It does not throw, and the other rows show.
-- `src/server/onboarding.ts`: `submitOnboardingCore(input: OnboardingDraft, repo): Promise<{ kind: "saved"; id: string } | { kind: "missing"; paths: string[] }>`. It calls `prepareOnboarding`, then `repo.create`. It never reads a tariff code from the input.
+- `src/server/onboarding.ts`: `submitOnboardingCore(input: OnboardingDraft, repo): Promise<{ kind: "saved"; id: string } | { kind: "missing"; paths: string[] } | { kind: "invalid"; issues: { path: string; message: string }[] }>`. It calls `prepareOnboarding`, then `repo.create`. It never reads a tariff code from the input.
 - `src/server/safe-action.ts`: the `next-safe-action` client. The server-error handler logs the error and returns "Something went wrong. Try again."
 - `src/app/onboarding/actions.ts`: `submitOnboarding`, `inputSchema(OnboardingDraftSchema)`. On `missing`: `returnValidationErrors` with "Required" at each path. On `saved`: `revalidatePath("/hr")`, redirect to `/onboarding/done`. Check the API shape with Context7 (Zod v4 support).
 - `src/prisma/seed.ts`: the seven example employees of the UI draft (CH; IT single; PT single + sole-custody child; CZ married + two children; DE border crosser; LI replacement daily return; IN replacement in CH), with the schema field names of § 2. Each seed record passes `OnboardingSchema`.
@@ -174,7 +174,7 @@ Unit (`bun test`, table-driven, each case has a `source`):
 | `src/server/enums.test.ts` | § 6 |
 | `src/server/employees.test.ts` | the row parse: a bad row gives `employee: null` (no database) |
 
-Playwright (`tests/e2e/onboarding.spec.ts`). `globalSetup` drops and creates the test database `lonio_test`, then runs the init. The web server uses that database.
+Playwright (`tests/e2e/onboarding.spec.ts`). The `webServer.command` first runs `tests/e2e/reset-database.ts`, which drops and creates the test database `lonio_test` and runs the init. Then it builds and starts the app on that database.
 
 1. Swiss: names + `CH`, no source-tax block, submit, the row shows on `/hr` with "No source tax (Swiss)".
 2. Married + one child (minor, in household, shared custody, same household), church member, spouse employed, residence CH: preview `C1Y`, submit, `/hr` shows `C1Y`.

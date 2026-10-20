@@ -60,6 +60,19 @@ describe("submitOnboardingCore", () => {
 		expect(created).toHaveLength(0);
 	});
 
+	test("a name of 101 characters is invalid and saves nothing (spec.md § 5)", async () => {
+		const { repo, created } = fakeRepo();
+		const result = await submitOnboardingCore(
+			{ ...complete, lastName: "x".repeat(101) },
+			repo,
+		);
+		expect(result).toEqual({
+			kind: "invalid",
+			issues: [{ path: "lastName", message: "Too long" }],
+		});
+		expect(created).toHaveLength(0);
+	});
+
 	test("the repository gets the pruned answers (spec.md § 3, prune)", async () => {
 		const { repo, created } = fakeRepo();
 		const stale: OnboardingDraft = {

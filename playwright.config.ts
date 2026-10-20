@@ -1,11 +1,10 @@
 import { defineConfig, devices } from "@playwright/test";
-import { TEST_DATABASE_URL } from "./tests/e2e/global-setup";
+import { TEST_DATABASE_URL } from "./tests/e2e/reset-database";
 
 const PORT = 3100;
 
 export default defineConfig({
 	testDir: "tests/e2e",
-	globalSetup: "./tests/e2e/global-setup.ts",
 	// The tests share one database, so they run one after the other.
 	workers: 1,
 	fullyParallel: false,
@@ -16,7 +15,8 @@ export default defineConfig({
 	},
 	projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
 	webServer: {
-		command: `bun run build && bun run start --port ${PORT}`,
+		// The reset runs first. Then the build and the start use the fresh database.
+		command: `bun tests/e2e/reset-database.ts && bun run build && bun run start --port ${PORT}`,
 		url: `http://localhost:${PORT}`,
 		reuseExistingServer: false,
 		timeout: 300_000,

@@ -6,7 +6,7 @@ import { z } from "zod";
 import { ZhAnswersSchema, ZhDraftSchema } from "../source-tax/zurich/schema.ts";
 import { Nationality } from "./countries.ts";
 
-export const Name = z.string().trim().min(1, "Required").max(100);
+export const Name = z.string().trim().min(1, "Required").max(100, "Too long");
 
 /** The form state. Every answer can be empty. */
 export const OnboardingDraftSchema = z.strictObject({

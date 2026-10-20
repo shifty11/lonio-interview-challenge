@@ -95,7 +95,7 @@ UI draft (clickable): https://claude.ai/artifact/AqrhqGt3KszCS8C6AfVHet
 | `src/server/onboarding.test.ts` | core action with a fake repo |
 | `src/server/enums.test.ts` | each Prisma enum (`Nationality`, `Canton`) equals its domain `z.enum` list |
 
-Playwright (`tests/e2e/onboarding.spec.ts`; `globalSetup` drops and recreates the test database, then runs `prisma db init`): Swiss path; married + child → C1Y on preview and dashboard; questions appear and disappear, and a question that reappears is empty; empty submit shows errors; Liechtenstein daily return shows no-source-tax + remark.
+Playwright (`tests/e2e/onboarding.spec.ts`; the web server command drops and recreates the test database, then runs `prisma db init`, before the build): Swiss path; married + child → C1Y on preview and dashboard; questions appear and disappear, and a question that reappears is empty; empty submit shows errors; Liechtenstein daily return shows no-source-tax + remark.
 
 ## 6. Steps (each one verifiable)
 

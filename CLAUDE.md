@@ -35,6 +35,7 @@ Use the Context7 MCP server for library docs. Do not rely on memory for library 
 src/
   domain/       pure logic: tariff rules, question flow, Zod schemas
   server/       repositories, the safe-action client
+  lib/          code that the client and the server share: the validation error tree, the date format
   prisma/       Prisma contract, emitted contract files, the db client
   app/          Next.js routes and server actions
   components/   shadcn/ui components and the form renderer

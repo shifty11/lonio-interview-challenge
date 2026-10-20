@@ -57,6 +57,7 @@ src/
     source-tax/  one module per canton. Zurich: questions, schemas, tariff rules, ESTV tables, tax amount
     onboarding/  nationality list, the onboarding schemas, prepareOnboarding, employeeTariff
   server/        repository, safe-action client, the core of the submit action
+  lib/           code shared by the client and the server: the error tree, the date format
   prisma/        Prisma 8 contract, emitted contract files, the database client, the seed
   app/           Next.js routes and the server action
   components/    shadcn/ui and the form components
@@ -84,7 +85,7 @@ The Zod schemas are the only source of the input type. Types come from `z.infer`
 - `ZhAnswersSchema` is the complete record. It is a nest of discriminated unions. An answer that exists in one branch only (for example `spouseEmployed`) is in that branch only.
 - `OnboardingSchema` is a discriminated union on the nationality. `CH` has no `sourceTax`. Every other nationality has `sourceTax` with the canton and the answers.
 
-The form uses `useHookFormAction` with the server action. The action declares `OnboardingDraftSchema` as its `inputSchema`. The client calls a typed function. The result is a typed union. There is no `any`, no `as` cast and no untyped `FormData` parsing at the boundary.
+The form uses `useHookFormAction` with the server action. The action declares `OnboardingDraftSchema` as its `inputSchema`. The client calls a typed function. The result is a typed union. At the client-server boundary there is no `any`, no `as` cast and no untyped `FormData` parsing. The generic flow engine has a few internal casts (the empty draft in `walk`, the result of `setPath`). The enumeration test and the schema-path test cover them.
 
 ### Form, server and dashboard use the same functions
 
@@ -131,7 +132,7 @@ A new canton is a new folder in `src/domain/source-tax/`. It adds a module with 
 - **Liechtenstein.** The calculator gives "In principle, no source tax" with a remark for a Liechtenstein resident who returns daily. The app shows the same text and the remark. It does not give a code.
 - **No fallback codes.** KS 45 allows `A0Y` or `C0Y` when data is missing. The calculator has no such rule. The app does not invent one. An incomplete form gives no code.
 - **The tax amount is extra.** The brief needs only the code. The domain also holds the 2026 ESTV tables and a tax amount function. The UI does not use it.
-- **The form state is not trusted.** `shouldUnregister` clears the value of a hidden question in the form. It is only UI help. `prune` in `prepareOnboarding` is the mechanism that keeps the record correct.
+- **The form state is not trusted.** `shouldUnregister` clears the value of a hidden question in the form. It is only UI help. Two label variants of one path (for example the married and the single wording of `hasChildren`) have two flow keys, so a change of the variant gives an empty field. `prune` in `prepareOnboarding` is the mechanism that keeps the record correct.
 
 ## Correctness
 
@@ -142,9 +143,9 @@ The code has several independent checks:
 - **Official documents are the oracle for the rules.** `sources/` holds ZStB 87.3, KS 45, the Zurich ordinance and the Swissdec guideline. Each rule cites its source in a comment. `bun run examples` prints the worked examples from the real functions.
 - **Exhaustive walk.** The enumeration test checks every answer path of the flow.
 - **Types.** TypeScript runs with `strict`, `noUncheckedIndexedAccess` and `exactOptionalPropertyTypes`. Every `switch` on a union ends with a `never` check.
-- **End-to-end tests.** Playwright runs five cases against a real browser and a real test database.
+- **End-to-end tests.** Playwright runs nine cases against a real browser and a real test database.
 
-Known gap: the end-to-end tests cover five paths. The unit tests cover the other paths.
+Known gap: the end-to-end tests cover nine paths. The unit tests cover the other paths.
 
 ## Security
 

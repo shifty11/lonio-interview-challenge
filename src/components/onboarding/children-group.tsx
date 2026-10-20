@@ -7,6 +7,7 @@ import { useFieldArray, useFormContext } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import type { VisibleGroup } from "@/domain/flow/engine";
 import type { OnboardingDraft } from "@/domain/onboarding/schema";
+import { MAX_CHILDREN } from "@/domain/source-tax/zurich/schema";
 import { answerPath } from "./draft";
 import { QuestionField } from "./question-field";
 
@@ -26,7 +27,7 @@ export function ChildrenGroup({ group }: { group: VisibleGroup }) {
 					</legend>
 					{group.items[index]?.questions.map((question) => (
 						<QuestionField
-							key={question.path}
+							key={question.key}
 							name={answerPath(question.path)}
 							label={question.label}
 							options={question.options}
@@ -44,11 +45,13 @@ export function ChildrenGroup({ group }: { group: VisibleGroup }) {
 					) : null}
 				</fieldset>
 			))}
-			<div>
-				<Button type="button" variant="outline" onClick={() => append({})}>
-					{group.addLabel}
-				</Button>
-			</div>
+			{fields.length < MAX_CHILDREN ? (
+				<div>
+					<Button type="button" variant="outline" onClick={() => append({})}>
+						{group.addLabel}
+					</Button>
+				</div>
+			) : null}
 		</div>
 	);
 }

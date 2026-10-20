@@ -31,50 +31,78 @@ describe("OnboardingSchema", () => {
 		expect(parsed.firstName).toBe("Anna");
 	});
 
-	const rejected: { name: string; input: unknown }[] = [
+	const rejected: { name: string; source: string; input: unknown }[] = [
 		{
 			name: "CH with sourceTax",
+			source: "spec.md § 5 (CH has no sourceTax)",
 			input: { ...swiss, sourceTax: italian.sourceTax },
 		},
 		{
 			name: "non-CH without sourceTax",
+			source: "spec.md § 5 (non-CH has sourceTax)",
 			input: { ...italian, sourceTax: undefined },
 		},
 		{
 			name: "extra tariffCode key on CH",
+			source: "spec.md § 5 (no tariffCode key; the dashboard computes it)",
 			input: { ...swiss, tariffCode: "A0N" },
 		},
 		{
 			name: "extra tariffCode key on non-CH",
+			source: "spec.md § 5 (no tariffCode key; the dashboard computes it)",
 			input: { ...italian, tariffCode: "A0N" },
 		},
 		{
 			name: "tariffCode inside sourceTax",
+			source: "spec.md § 5 (no tariffCode key; the dashboard computes it)",
 			input: {
 				...italian,
 				sourceTax: { ...italian.sourceTax, tariffCode: "A0N" },
 			},
 		},
-		{ name: "empty first name", input: { ...swiss, firstName: "" } },
-		{ name: "blank last name", input: { ...swiss, lastName: "   " } },
+		{
+			name: "empty first name",
+			source: "spec.md § 5 (Name: trimmed, 1 to 100 characters)",
+			input: { ...swiss, firstName: "" },
+		},
+		{
+			name: "blank last name",
+			source: "spec.md § 5 (Name: trimmed, 1 to 100 characters)",
+			input: { ...swiss, lastName: "   " },
+		},
 		{
 			name: "name longer than 100",
+			source: "spec.md § 5 (Name: trimmed, 1 to 100 characters)",
 			input: { ...swiss, lastName: "x".repeat(101) },
 		},
-		{ name: "unknown nationality", input: { ...swiss, nationality: "ZZ" } },
-		{ name: "lower-case nationality", input: { ...swiss, nationality: "ch" } },
-		{ name: "missing nationality", input: { firstName: "A", lastName: "B" } },
+		{
+			name: "unknown nationality",
+			source: "spec.md § 5 (Nationality: ISO 3166-1 alpha-2 list)",
+			input: { ...swiss, nationality: "ZZ" },
+		},
+		{
+			name: "lower-case nationality",
+			source: "spec.md § 5 (Nationality: ISO 3166-1 alpha-2 list)",
+			input: { ...swiss, nationality: "ch" },
+		},
+		{
+			name: "missing nationality",
+			source: "spec.md § 5 (Nationality is required)",
+			input: { firstName: "A", lastName: "B" },
+		},
 		{
 			name: "incomplete ZH answers",
+			source: "spec.md § 5 (sourceTax.answers is ZhAnswersSchema)",
 			input: { ...italian, sourceTax: { canton: "ZH", answers: {} } },
 		},
 		{
 			name: "unknown canton",
+			source: "spec.md § 5 (sourceTax.canton is a registered canton)",
 			input: { ...italian, sourceTax: { canton: "BE", answers: swissAnswers } },
 		},
 	];
-	for (const { name, input } of rejected) {
-		test(`rejects ${name}`, () => {
+	for (const { name, source, input } of rejected) {
+		test(`rejects ${name} (${source})`, () => {
 			expect(OnboardingSchema.safeParse(input).success).toBe(false);
 		});
 	}

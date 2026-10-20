@@ -3,6 +3,7 @@ import {
 	MarriedChildSchema,
 	UnmarriedChildSchema,
 	ZhAnswersSchema,
+	ZhDraftSchema,
 } from "./schema.ts";
 import { hChild, swiss } from "./test-fixtures.ts";
 
@@ -166,5 +167,27 @@ describe("child schemas", () => {
 		};
 		expect(MarriedChildSchema.safeParse(child).success).toBe(false);
 		expect(UnmarriedChildSchema.safeParse(child).success).toBe(true);
+	});
+});
+
+describe("children list limit", () => {
+	const kids = (n: number) => Array.from({ length: n }, () => ({ ...hChild }));
+
+	// source: spec.md § 5.1 (the limit only bounds the input; the digit caps at 9, calc-spec § 6.1)
+	test("20 children pass and 21 fail the answers schema", () => {
+		const answers = (n: number) => ({
+			...single,
+			children: { hasChildren: true, list: kids(n) },
+		});
+		expect(ZhAnswersSchema.safeParse(answers(20)).success).toBe(true);
+		expect(ZhAnswersSchema.safeParse(answers(21)).success).toBe(false);
+	});
+
+	test("20 children pass and 21 fail the draft parse", () => {
+		const draft = (n: number) => ({
+			children: { hasChildren: true, list: kids(n) },
+		});
+		expect(ZhDraftSchema.safeParse(draft(20)).success).toBe(true);
+		expect(ZhDraftSchema.safeParse(draft(21)).success).toBe(false);
 	});
 });

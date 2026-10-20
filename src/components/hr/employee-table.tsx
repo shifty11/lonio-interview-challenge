@@ -10,8 +10,8 @@ import {
 import { countryName } from "@/domain/onboarding/countries";
 import { employeeTariff } from "@/domain/onboarding/employee-tariff";
 import { describeTariffCode } from "@/domain/source-tax/zurich/meaning";
+import { formatAdded } from "@/lib/format";
 import type { EmployeeRow } from "@/server/employees";
-import { formatAdded } from "@/server/format";
 
 type TariffCells = { tariff: React.ReactNode; meaning: string; remark: string };
 

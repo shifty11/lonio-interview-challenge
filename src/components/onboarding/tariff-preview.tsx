@@ -5,7 +5,7 @@
 import { useFormContext, useWatch } from "react-hook-form";
 import { Card } from "@/components/ui/card";
 import type { OnboardingDraft } from "@/domain/onboarding/schema";
-import { describeTariffCode } from "@/domain/source-tax/zurich/meaning";
+import { describeTariffParts } from "@/domain/source-tax/zurich/meaning";
 import { previewTariff } from "@/domain/source-tax/zurich/preview";
 import { ANSWERS_PREFIX } from "./draft";
 
@@ -27,16 +27,6 @@ function State({
 			{children}
 		</div>
 	);
-}
-
-/** The three characters of a code: letter, digit and church flag. */
-function codeParts(code: string) {
-	const [letter = "", digit = "", church = ""] = code;
-	return [
-		{ name: "letter", char: letter },
-		{ name: "digit", char: digit },
-		{ name: "church", char: church },
-	];
 }
 
 function Remark({ text }: { text: string | null }) {
@@ -73,7 +63,8 @@ function Body() {
 					<Remark text={preview.remark} />
 				</>
 			);
-		case "code":
+		case "code": {
+			const parts = describeTariffParts(preview.code);
 			return (
 				<>
 					<div
@@ -82,7 +73,7 @@ function Body() {
 						data-testid="tariff-code"
 						className="flex gap-1.5"
 					>
-						{codeParts(preview.code).map((part) => (
+						{parts.map((part) => (
 							<span
 								key={part.name}
 								className="min-w-13 rounded-lg bg-accent px-3 pt-2.5 pb-2 text-center font-mono text-3xl leading-none font-semibold text-accent-foreground"
@@ -91,12 +82,23 @@ function Body() {
 							</span>
 						))}
 					</div>
-					<p className="text-sm text-muted-foreground">
-						{describeTariffCode(preview.code)}
-					</p>
+					<dl className="grid gap-1.5 text-sm">
+						{parts.map((part) => (
+							<div
+								key={part.name}
+								className="grid grid-cols-[1.5rem_minmax(0,1fr)] gap-2"
+							>
+								<dt className="font-mono font-semibold text-accent-foreground">
+									{part.char}
+								</dt>
+								<dd className="text-muted-foreground">{part.text}</dd>
+							</div>
+						))}
+					</dl>
 					<Remark text={preview.remark} />
 				</>
 			);
+		}
 		default: {
 			const unreachable: never = preview;
 			return unreachable;

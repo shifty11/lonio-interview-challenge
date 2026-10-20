@@ -10,7 +10,7 @@ import type {
 	OnboardingDraftSchema,
 } from "@/domain/onboarding/schema";
 import { zhFlow } from "@/domain/source-tax/zurich/questions";
-import { requiredErrors } from "@/server/validation-errors";
+import { prepareErrors } from "@/lib/validation-errors";
 
 export type DraftPath = FieldPath<OnboardingDraft>;
 
@@ -72,7 +72,7 @@ export const onboardingResolver: Resolver<OnboardingDraft> = (values) => {
 		return { values: draft, errors: {} };
 	}
 	const errors = mapToHookFormErrors<typeof OnboardingDraftSchema>(
-		requiredErrors(result.paths),
+		prepareErrors(result),
 	);
 	return { values: {}, errors: errors ?? {} };
 };
@@ -80,5 +80,16 @@ export const onboardingResolver: Resolver<OnboardingDraft> = (values) => {
 /** The number of open answers, or 0 when the draft is complete. */
 export function openAnswerCount(values: OnboardingDraft): number {
 	const result = prepareOnboarding(toDraft(values));
-	return result.kind === "missing" ? result.paths.length : 0;
+	switch (result.kind) {
+		case "ok":
+			return 0;
+		case "missing":
+			return result.paths.length;
+		case "invalid":
+			return result.issues.length;
+		default: {
+			const unreachable: never = result;
+			return unreachable;
+		}
+	}
 }

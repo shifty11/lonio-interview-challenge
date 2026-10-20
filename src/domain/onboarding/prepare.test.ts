@@ -100,12 +100,24 @@ describe("prepareOnboarding", () => {
 		});
 	});
 
-	test("a name over 100 characters is reported by path", () => {
+	test("a name over 100 characters is invalid, with the Zod message", () => {
 		const result = prepareOnboarding({
 			firstName: "x".repeat(101),
 			lastName: "B",
 			nationality: "CH",
 		});
-		expect(result).toEqual({ kind: "missing", paths: ["firstName"] });
+		expect(result).toEqual({
+			kind: "invalid",
+			issues: [{ path: "firstName", message: "Too long" }],
+		});
+	});
+
+	test("a name of 100 characters is accepted", () => {
+		const result = prepareOnboarding({
+			firstName: "x".repeat(100),
+			lastName: "B",
+			nationality: "CH",
+		});
+		expect(result.kind).toBe("ok");
 	});
 });

@@ -19,6 +19,12 @@ for (const { source, ...draft } of seedEmployees) {
 			`Seed record "${draft.firstName} ${draft.lastName}" (${source}) is incomplete: ${prepared.paths.join(", ")}`,
 		);
 	}
+	if (prepared.kind === "invalid") {
+		const issues = prepared.issues.map((i) => `${i.path} (${i.message})`);
+		throw new Error(
+			`Seed record "${draft.firstName} ${draft.lastName}" (${source}) is invalid: ${issues.join(", ")}`,
+		);
+	}
 	await employeeRepo.create(prepared.value);
 }
 console.log(`Seeded ${seedEmployees.length} employees.`);

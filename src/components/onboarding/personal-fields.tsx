@@ -23,12 +23,19 @@ const COUNTRIES: readonly CountryItem[] = COUNTRY_CODES.map((code) => ({
 	label: countryName(code),
 })).sort((a, b) => a.label.localeCompare(b.label, "en"));
 
-function FieldError({ id, show }: { id: string; show: boolean }) {
-	return show ? (
+/** The message of the field: "Required" for a missing answer, the Zod message for an invalid one. */
+function FieldError({
+	id,
+	error,
+}: {
+	id: string;
+	error: { message?: string | undefined } | undefined;
+}) {
+	return error === undefined ? null : (
 		<p id={id} role="alert" className="text-xs text-destructive">
-			Required
+			{error.message ?? "Required"}
 		</p>
-	) : null;
+	);
 }
 
 export function PersonalFields() {
@@ -45,25 +52,24 @@ export function PersonalFields() {
 				<Input
 					id="firstName"
 					autoComplete="given-name"
+					maxLength={100}
 					aria-invalid={errors.firstName !== undefined}
 					aria-describedby="firstName-error"
 					{...register("firstName")}
 				/>
-				<FieldError
-					id="firstName-error"
-					show={errors.firstName !== undefined}
-				/>
+				<FieldError id="firstName-error" error={errors.firstName} />
 			</div>
 			<div className="grid gap-1.5">
 				<Label htmlFor="lastName">Last name</Label>
 				<Input
 					id="lastName"
 					autoComplete="family-name"
+					maxLength={100}
 					aria-invalid={errors.lastName !== undefined}
 					aria-describedby="lastName-error"
 					{...register("lastName")}
 				/>
-				<FieldError id="lastName-error" show={errors.lastName !== undefined} />
+				<FieldError id="lastName-error" error={errors.lastName} />
 			</div>
 			<div className="grid gap-1.5 sm:col-span-2">
 				<Label htmlFor="nationality">Nationality</Label>
@@ -97,10 +103,7 @@ export function PersonalFields() {
 						</Combobox>
 					)}
 				/>
-				<FieldError
-					id="nationality-error"
-					show={errors.nationality !== undefined}
-				/>
+				<FieldError id="nationality-error" error={errors.nationality} />
 			</div>
 		</div>
 	);

@@ -186,6 +186,107 @@ describe("visibleQuestions", () => {
 	});
 });
 
+describe("visibleQuestions keys", () => {
+	// Two label variants share the path `v` (root) and `list.<i>.w` (item). Only one shows.
+	const variantFlow: Flow<Root & { v?: boolean }, Item & { w?: boolean }> = [
+		{
+			kind: "question",
+			id: "a",
+			label: "A",
+			options: YES_NO,
+			visibleWhen: () => true,
+			source: "test",
+		},
+		{
+			kind: "question",
+			id: "v",
+			label: "V when a",
+			options: YES_NO,
+			visibleWhen: (root) => root.a === true,
+			source: "test",
+		},
+		{
+			kind: "question",
+			id: "v",
+			label: "V when not a",
+			options: YES_NO,
+			visibleWhen: (root) => root.a === false,
+			source: "test",
+		},
+		{
+			kind: "group",
+			id: "list",
+			itemLabel: "Item",
+			addLabel: "Add item",
+			visibleWhen: () => true,
+			items: [
+				{
+					kind: "question",
+					id: "x",
+					label: "X",
+					options: YES_NO,
+					visibleWhen: () => true,
+					source: "test",
+				},
+				{
+					kind: "question",
+					id: "w",
+					label: "W when x",
+					options: YES_NO,
+					visibleWhen: (_root, item) => item.x === true,
+					source: "test",
+				},
+				{
+					kind: "question",
+					id: "w",
+					label: "W when not x",
+					options: YES_NO,
+					visibleWhen: (_root, item) => item.x === false,
+					source: "test",
+				},
+			],
+		},
+	];
+
+	function keysOf(draft: Root & { v?: boolean }): Record<string, string> {
+		const keys: Record<string, string> = {};
+		for (const node of visibleQuestions(variantFlow, draft)) {
+			if (node.kind === "question") {
+				keys[node.label] = node.key;
+				continue;
+			}
+			for (const item of node.items) {
+				for (const question of item.questions) {
+					keys[question.label] = question.key;
+				}
+			}
+		}
+		return keys;
+	}
+
+	test("two variants of one root path have two keys", () => {
+		const yes = keysOf({ a: true });
+		const no = keysOf({ a: false });
+		expect(yes["V when a"]).toBeDefined();
+		expect(no["V when not a"]).toBeDefined();
+		expect(yes["V when a"]).not.toBe(no["V when not a"]);
+	});
+
+	test("two variants of one item path have two keys", () => {
+		const yes = keysOf({ list: [{ x: true }] });
+		const no = keysOf({ list: [{ x: false }] });
+		expect(yes["W when x"]).toBeDefined();
+		expect(no["W when not x"]).toBeDefined();
+		expect(yes["W when x"]).not.toBe(no["W when not x"]);
+	});
+
+	test("the key of a question does not change while it stays visible", () => {
+		expect(keysOf({ a: true })["V when a"]).toBe(
+			keysOf({ a: true, v: true })["V when a"],
+		);
+	});
+});
+
 describe("missingAnswers", () => {
 	const cases: { name: string; draft: Root; missing: string[] }[] = [
 		{ name: "empty draft", draft: {}, missing: ["a", "late"] },

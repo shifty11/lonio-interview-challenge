@@ -3,13 +3,17 @@
 // A tariff code in the input fails the draft schema before this function runs.
 // The code is never stored: the dashboard computes it.
 
-import { prepareOnboarding } from "../domain/onboarding/prepare.ts";
+import {
+	type PrepareIssue,
+	prepareOnboarding,
+} from "../domain/onboarding/prepare.ts";
 import type { OnboardingDraft } from "../domain/onboarding/schema.ts";
 import type { EmployeeRepo } from "./employees.ts";
 
 export type SubmitResult =
 	| { kind: "saved"; id: string }
-	| { kind: "missing"; paths: string[] };
+	| { kind: "missing"; paths: string[] }
+	| { kind: "invalid"; issues: PrepareIssue[] };
 
 export async function submitOnboardingCore(
 	input: OnboardingDraft,
@@ -19,6 +23,8 @@ export async function submitOnboardingCore(
 	switch (prepared.kind) {
 		case "missing":
 			return { kind: "missing", paths: prepared.paths };
+		case "invalid":
+			return { kind: "invalid", issues: prepared.issues };
 		case "ok": {
 			const { id } = await repo.create(prepared.value);
 			return { kind: "saved", id };

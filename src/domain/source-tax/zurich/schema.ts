@@ -266,11 +266,14 @@ export const ResidenceSchema = z.discriminatedUnion("residenceInSwitzerland", [
 ]);
 export type Residence = z.infer<typeof ResidenceSchema>;
 
+// The digit of the tariff code caps at 9 (calc-spec § 6.1). The limit only bounds the input.
+export const MAX_CHILDREN = 20;
+
 const MarriedChildren = z.discriminatedUnion("hasChildren", [
 	z.strictObject({ hasChildren: no }),
 	z.strictObject({
 		hasChildren: yes,
-		list: z.array(MarriedChildSchema).min(1),
+		list: z.array(MarriedChildSchema).min(1).max(MAX_CHILDREN),
 	}),
 ]);
 
@@ -278,7 +281,7 @@ const UnmarriedChildren = z.discriminatedUnion("hasChildren", [
 	z.strictObject({ hasChildren: no }),
 	z.strictObject({
 		hasChildren: yes,
-		list: z.array(UnmarriedChildSchema).min(1),
+		list: z.array(UnmarriedChildSchema).min(1).max(MAX_CHILDREN),
 	}),
 ]);
 
@@ -335,7 +338,7 @@ export const ZhDraftSchema = z.strictObject({
 	children: z
 		.strictObject({
 			hasChildren: optionalBoolean,
-			list: z.array(ZhDraftChildSchema).optional(),
+			list: z.array(ZhDraftChildSchema).max(MAX_CHILDREN).optional(),
 		})
 		.optional(),
 	residence: z
