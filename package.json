@@ -1,0 +1,21 @@
+{
+	"name": "lonio-interview-challenge",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"test": "bun test",
+		"typecheck": "tsc --noEmit",
+		"lint": "biome check .",
+		"format": "biome format --write .",
+		"gen:tariff": "bun scripts/gen-tariff-data.ts",
+		"examples": "bun scripts/zh-worked-examples.ts"
+	},
+	"dependencies": {
+		"zod": "^4"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "^2.5.15",
+		"@types/bun": "^1.4.3",
+		"typescript": "^7.0.2"
+	}
+}
