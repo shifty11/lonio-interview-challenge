@@ -76,7 +76,8 @@ Run each command from the repo root. Each command ran without error when it was 
 | `bun run examples` | prints the worked examples of `plans/1-zh-source-tax/plan.md` from the real functions. It exits with code 1 when a value differs. |
 | `docker compose up -d` | starts PostgreSQL 17 on host port 54329. Copy `.env.example` to `.env` first. |
 | `bun install` | installs the packages |
-| `bun run dev` | starts Next.js on port 3000 |
+| `bun run dev` | starts PostgreSQL (`docker compose up -d --wait`) and the Next.js dev server on port 3000. When the dev server exits (Ctrl+C), it runs `docker compose stop`. |
+| `bun run dev:next` | starts only the Next.js dev server on port 3000. PostgreSQL must run. |
 | `bun run build` | builds the app. The Geist font needs network access. |
 | `bun run gen:enums` | writes the two `native_enum` blocks of `src/prisma/contract.prisma` from the domain lists. A second run gives no diff. |
 | `bun run contract:emit` | runs `gen:enums`, then `prisma contract emit`. It writes `contract.json` and `contract.d.ts` with two-space indent. Restore the committed files when only the whitespace differs. |

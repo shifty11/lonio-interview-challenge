@@ -14,11 +14,13 @@ You need Bun, Docker and Node.js.
 ```sh
 bun install
 cp .env.example .env          # the values match docker-compose.yml. They are not secrets.
-docker compose up -d          # PostgreSQL 17 on host port 54329
+docker compose up -d --wait   # PostgreSQL 17 on host port 54329
 bun run db:init               # creates the tables on an empty database
 bun run db:seed               # adds seven example employees. It does nothing when the table has rows.
 bun run dev                   # http://localhost:3000
 ```
+
+`bun run dev` starts PostgreSQL and the dev server. Ctrl+C stops both. `bun run dev:next` starts only the dev server.
 
 Open `/onboarding` for the form and `/hr` for the dashboard. The page `/hr` has no login (see "Security").
 
