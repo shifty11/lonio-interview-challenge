@@ -309,3 +309,46 @@ export const ZhAnswersSchema = z.discriminatedUnion("incomeType", [
 	}),
 ]);
 export type ZhAnswers = z.infer<typeof ZhAnswersSchema>;
+
+// The draft: the same dot paths as `ZhAnswersSchema`, every leaf optional.
+// The form state and the flow engine use it. `z.strictObject` at every level.
+
+const optionalBoolean = z.boolean().optional();
+
+export const ZhDraftChildSchema = z.strictObject({
+	group: ChildGroup.optional(),
+	childInSameHousehold: optionalBoolean,
+	parentalCare: optionalBoolean,
+	sharedCustody: optionalBoolean,
+	sameHousehold: optionalBoolean,
+	alternatingCustody: optionalBoolean,
+	mainFinancialContributor: MainFinancialContributor.optional(),
+	financiallySupported: optionalBoolean,
+});
+export type ZhDraftChild = z.infer<typeof ZhDraftChildSchema>;
+
+export const ZhDraftSchema = z.strictObject({
+	incomeType: IncomeType.optional(),
+	civilStatus: CivilStatus.optional(),
+	churchMember: optionalBoolean,
+	spouseEmployed: optionalBoolean,
+	children: z
+		.strictObject({
+			hasChildren: optionalBoolean,
+			list: z.array(ZhDraftChildSchema).optional(),
+		})
+		.optional(),
+	residence: z
+		.strictObject({
+			residenceInSwitzerland: optionalBoolean,
+			countryOfResidence: CountryOfResidence.optional(),
+			dailyReturnToGermany: optionalBoolean,
+			gre1Gre2: optionalBoolean,
+			dailyReturnToCountryOfResidenceReasonable: optionalBoolean,
+			gre3: optionalBoolean,
+			dailyReturnToLiechtenstein: optionalBoolean,
+			moreThanFortyFiveNonReturnDays: optionalBoolean,
+		})
+		.optional(),
+});
+export type ZhDraft = z.infer<typeof ZhDraftSchema>;

@@ -122,3 +122,27 @@ Run steps; approach (bundle → spec → live check → golden tests); architect
 ## 9. Risks (check current docs via Context7 at implementation time)
 
 Prisma 8 (`prisma orm init` output with Bun, `with { type: "json" }` import of `contract.json` under Next.js and `resolveJsonModule`, `Jsonb?` null write and the read type, `db.enums` shape for the enum test, the `migrations/app` folder, a `zod-json` extension if it exists, `pg.enum` filters support only `eq` and `in`); `next-safe-action` with Zod v4 and the RHF adapter (`useHookFormAction`, `returnValidationErrors` shape); the emitted `contract.d.ts` types under `exactOptionalPropertyTypes`; Next.js major version and server-action serialization; Tailwind v4 + current `shadcn init`; Zod v4 (nested discriminated unions with boolean discriminators, `z.strictObject`, error helpers, `exactOptionalPropertyTypes`); RHF + `@hookform/resolvers` with Zod v4, `useFieldArray` on nested paths, `shouldUnregister: true` together with `useFieldArray`; `bun test` root and path aliases; Playwright webServer + test DB order.
+
+## 10. Delivery
+
+`spec.md` in this folder defines the exact behavior. The spec wins over this plan.
+
+Decisions of the user (2026-10-20):
+
+- Three implementer rounds, one commit per round: A (steps 2–5), B (steps 1, 6–8), C (steps 9–11). Then one review pass over all rounds.
+- The implementer writes the full README from § 8, also the approach and AI-use parts. The user edits the personal parts later.
+- No bookmark, no push, no pull request.
+
+Decisions of the orchestrator (conventional defaults):
+
+- The question ids are the paths of the existing `schema.ts`. The UI draft is layout only.
+- Prisma 8 and `next-safe-action` API names come from Context7 at build time, not from this plan.
+- One root `package.json`, no sub-project.
+
+## 11. End-to-end
+
+1. `docker compose up -d`, then `bun run db:init` and `bun run db:seed` on an empty database.
+2. `bun run dev` in a herdr pane. `/hr` shows the seven seed employees with their codes.
+3. `bun run test:e2e` passes (the five cases of `spec.md` § 8). Playwright needs a browser download (network).
+4. A browser pass of the orchestrator with the Playwright MCP tools over the same five cases, plus a look at light and dark mode.
+5. `bun run gen:tariff` gives no diff. `bun run examples` exits with 0.
