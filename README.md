@@ -61,8 +61,7 @@ For correctness I relied on tests and on the real calculator as the reference:
 ## Trade-offs
 For the sake of simplicity I made the following trade-offs:
 - No login and no other security for the app. The main focus was the extraction of the logic and a simple way to show it.
-- I did not spend time on library choices, except for the points in "Approach" and Prisma 8.
-- I chose Prisma 8, which is still a release candidate, for its typed contract and its native PostgreSQL enums. An API can still change before the final release, and a release candidate can have bugs.
+- I did not spend time on library choices, except for the points in "Approach".
 - I let the agent decide on most of the folder structure.
 - Biome runs with its recommended rules and TypeScript is strict, but I did not add any custom lint rules. In a real app this would help code quality.
 - I did not read most of the code that the agents produced. The tests and the reviewer agent are what check it.
