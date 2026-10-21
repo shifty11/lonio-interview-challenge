@@ -2,7 +2,7 @@
 
 An employee onboarding form and an HR dashboard. The dashboard shows the Zurich source-tax tariff code (for example `B2Y`) of each non-Swiss employee.
 
-See [How I built this with Claude Code](https://claude.ai/artifact/UEfctpdDfwgk8uxdr41bWf) for the most important sessions behind this repo.
+See [How I built this with Claude Code](https://claude.ai/artifact/UEfctpdDfwgk8uxdr41bWf) for the most important sessions behind this repo. I left out the cleanup sessions to keep it short.
 
 ## Run
 
@@ -41,8 +41,6 @@ I use Claude Code inside herdr (herdr.dev). I have a remote setup that I can rea
 Right now I mostly use Opus 5.5 as the main agent, Fable 5.1 for more complex tasks and Sonnet 5.5 for simpler ones. This can change from month to month.
 
 `CLAUDE.md` holds the rules for the agents: the stack, the layout, the architecture rules and the commands. The agents use the Context7 MCP server to read current library docs.
-
-[How I built this with Claude Code](https://claude.ai/artifact/UEfctpdDfwgk8uxdr41bWf) shows the most important sessions that I used to build the app. I left out the cleanup sessions to keep it short.
 
 ## Tools, agents and workflows
 - Claude Code (Opus 5.5, Fable 5.1 and Sonnet 5.5)
