@@ -39,14 +39,21 @@ function keysByPath(nodes: readonly VisibleNode[]): Map<string, string> {
 }
 
 /**
- * Clears the value of a question when another label variant of the same path takes its place.
- * The new variant mounts as a new field (its key differs). React Hook Form gives a new field the
- * value that it holds for the path at render time, and a later `setValue(path, undefined)` does
- * not reach the field, because the field falls back to that first value. So the clear happens in
- * the `subscribe` callback, which runs in the change event, before React renders the new field.
- * A path that keeps its key (for example after "Remove" shifts the children) keeps its value.
+ * Clears the value of a question that the flow hides, so a question that shows again is empty.
+ * Also clears the value of a question when another label variant of the same path takes its
+ * place. The new variant mounts as a new field (its key differs). React Hook Form gives a new
+ * field the value that it holds for the path at render time, and a later `setValue(path,
+ * undefined)` does not reach the field, because the field falls back to that first value. So the
+ * clear happens in the `subscribe` callback, which runs in the change event, before React renders
+ * the new field. A path that keeps its key (for example after "Remove" shifts the children) keeps
+ * its value. A hidden path with no value stays as it is: after "Remove", the path of the last
+ * child has no value, and a `setValue` on it would add an item to the list.
+ *
+ * The form does not use the React Hook Form option `shouldUnregister` for this. With that option,
+ * a field deletes its value when it unmounts, and React Strict Mode unmounts each new field one
+ * time. So a field that mounts with a value (a child after "Add" or "Remove") loses the value.
  */
-function useClearOnVariantChange(initial: readonly VisibleNode[]) {
+function useClearHiddenAnswers(initial: readonly VisibleNode[]) {
 	const { subscribe, getValues, setValue } = useFormContext<OnboardingDraft>();
 	const previous = useRef<Map<string, string>>(keysByPath(initial));
 
@@ -65,6 +72,12 @@ function useClearOnVariantChange(initial: readonly VisibleNode[]) {
 						setValue(answerPath(path), undefined);
 					}
 				}
+				for (const path of before.keys()) {
+					const name = answerPath(path);
+					if (!next.has(path) && getValues(name) !== undefined) {
+						setValue(name, undefined);
+					}
+				}
 			},
 		});
 	}, [subscribe, getValues, setValue]);
@@ -74,7 +87,7 @@ export function FlowRenderer() {
 	const { control, setValue } = useFormContext<OnboardingDraft>();
 	const answers = useWatch({ control, name: ANSWERS_PREFIX });
 	const nodes = visibleQuestions(zhFlow, answers ?? {});
-	useClearOnVariantChange(nodes);
+	useClearHiddenAnswers(nodes);
 
 	return (
 		<div>

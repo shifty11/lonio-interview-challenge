@@ -184,6 +184,22 @@ describe("visibleQuestions", () => {
 				: [];
 		expect(paths).toEqual(["list.0.x", "list.0.y", "list.1.x"]);
 	});
+
+	test("reads a hole in the list as an empty item", () => {
+		// Each item keeps its index, so a visible path and a pruned item refer to the same child.
+		const list: Item[] = [];
+		list[1] = { x: true };
+		const draft: Root = { a: true, b: true, list };
+		const group = visibleQuestions(flow, draft).find(
+			(node) => node.kind === "group",
+		);
+		const paths =
+			group?.kind === "group"
+				? group.items.flatMap((item) => item.questions.map((q) => q.path))
+				: [];
+		expect(paths).toEqual(["list.0.x", "list.1.x", "list.1.y"]);
+		expect(prune(flow, draft).list).toEqual([{}, { x: true }]);
+	});
 });
 
 describe("visibleQuestions keys", () => {

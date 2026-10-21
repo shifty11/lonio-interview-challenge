@@ -42,9 +42,8 @@ export const defaultValues: DefaultValues<OnboardingDraft> = {
 };
 
 /**
- * The draft that goes to the resolver and to the server. With `shouldUnregister`, the form values
- * hold only the registered fields, so `sourceTax.canton` is missing: this function adds it.
- * A Swiss employee has no `sourceTax`. The answers are pruned.
+ * The draft that goes to the resolver and to the server. A Swiss employee has no `sourceTax`.
+ * The answers are pruned, so an answer of a hidden question does not go to the server.
  */
 export function toDraft(values: OnboardingDraft): OnboardingDraft {
 	const { firstName, lastName, nationality } = values;

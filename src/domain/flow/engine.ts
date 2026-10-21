@@ -75,7 +75,10 @@ function walk<Root extends object, Item extends object>(
 				const rawItems: unknown[] = Array.isArray(raw) ? raw : [];
 				const prunedItems: Item[] = [];
 				const items: VisibleItem[] = [];
-				rawItems.forEach((rawItem, index) => {
+				// A `for` loop, not `forEach`: `forEach` skips a hole in a sparse list. A hole is an
+				// empty item, so each item keeps its index.
+				for (let index = 0; index < rawItems.length; index++) {
+					const rawItem = rawItems[index];
 					let item = {} as Item;
 					const questions: VisibleQuestion[] = [];
 					const itemPath = `${node.id}.${index}`;
@@ -98,7 +101,7 @@ function walk<Root extends object, Item extends object>(
 					}
 					prunedItems.push(item);
 					items.push({ index, path: itemPath, questions });
-				});
+				}
 				visible.push({
 					kind: "group",
 					path: node.id,

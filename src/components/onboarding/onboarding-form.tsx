@@ -1,8 +1,8 @@
 "use client";
 
 // The onboarding form. The shared Zod schema types the server action. The resolver calls
-// `prepareOnboarding`. `shouldUnregister` drops the value of a hidden question, so a question
-// that shows again is empty. The server prunes again: the form state is not trusted.
+// `prepareOnboarding`. `FlowRenderer` clears the value of a hidden question, so a question that
+// shows again is empty. The server prunes again: the form state is not trusted.
 
 import { useHookFormAction } from "@next-safe-action/adapter-react-hook-form/hooks";
 import { FormProvider, useWatch } from "react-hook-form";
@@ -37,7 +37,7 @@ export function OnboardingForm() {
 	const { form, action, handleSubmitWithAction } = useHookFormAction(
 		submitOnboarding,
 		onboardingResolver,
-		{ formProps: { shouldUnregister: true, defaultValues } },
+		{ formProps: { defaultValues } },
 	);
 	const values = form.watch();
 	const submitted = form.formState.submitCount > 0;
